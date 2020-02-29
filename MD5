@@ -1,4 +1,4 @@
-a9311fc18a7e306937934f4386bed4fc *DESCRIPTION
+e520f5d1a2fbf0624a85b4b0350716cc *DESCRIPTION
 18c28e9f5fc1b48811f34969467049f2 *LICENSE
 ff24e24bf074647343e8575bcd739d7f *NAMESPACE
 29c6fca9aa993585bb7f679139f2eaa8 *R/columns.R
@@ -20,5 +20,5 @@ f5cf93ea6635e8a786d8b1881b23c571 *man/reactable-shiny.Rd
 4e3f55c75c8921ccc5072885fb03b140 *man/reexports.Rd
 9df96ea3011b7dd5a4d24fbe29b10634 *tests/testthat.R
 db6ed19addc9c1be28a3ca92a10597f2 *tests/testthat/test-columns.R
-e599ae98db6db880cef3ec03ecdd8087 *tests/testthat/test-reactable.R
+be3a01c360a7a5f5b986289631b7a1b3 *tests/testthat/test-reactable.R
 32203077a9fe8d2782d07f488b50f1fd *tests/testthat/test-utils.R
