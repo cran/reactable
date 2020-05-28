@@ -3,7 +3,8 @@
 #' @param name Column header name.
 #' @param aggregate Aggregate function. The name of a built-in aggregate
 #'   function or a custom [JS()] aggregate function. Built-in aggregate functions
-#'   are: `"mean"`, `"sum"`, `"max"`, `"min"`, `"count"`, `"unique"`, `"frequency"`.
+#'   are: `"mean"`, `"sum"`, `"max"`, `"min"`, `"median"`, `"count"`,
+#'   `"unique"`, `"frequency"`.
 #' @param sortable Enable sorting? Overrides the table option.
 #' @param resizable Enable column resizing? Overrides the table option.
 #' @param filterable Enable column filtering? Overrides the table option.
@@ -28,7 +29,7 @@
 #' @param details Additional content to display when expanding a row. An R function
 #'   that takes a row index argument or a [JS()] function that takes a row info object
 #'   as an argument. Cannot be used on a grouping column.
-#' @param html Render cells as HTML? HTML strings are escaped by default.
+#' @param html Render content as HTML? Raw HTML strings are escaped by default.
 #' @param na String to display for missing values (i.e. [NA] or [NaN]).
 #'   By default, missing values are displayed as blank cells.
 #' @param minWidth Min width of the column in pixels.
@@ -87,7 +88,8 @@ colDef <- function(name = NULL, aggregate = NULL, sortable = NULL,
   }
   if (!is.null(aggregate)) {
     if (is.character(aggregate) && !is.JS(aggregate)) {
-      aggregators <- c("mean", "sum", "max", "min", "count", "unique", "frequency")
+      aggregators <- c("mean", "sum", "max", "min", "median", "count",
+                       "unique", "frequency")
       if (!aggregate %in% aggregators) {
         stop("`aggregate` must be a valid aggregate function")
       }
@@ -229,7 +231,7 @@ isDescOrder <- function(x) {
 #' @param columns Character vector of column names in the group.
 #' @param header Custom header renderer. An R function that takes the header value
 #'   as an argument, or a [JS()] function that takes a column info object as an argument.
-#' @param html Render header as HTML? HTML strings are escaped by default.
+#' @param html Render header content as HTML? Raw HTML strings are escaped by default.
 #' @param align Column group header alignment. One of `"left"`, `"right"`, `"center"`.
 #' @param headerClass Additional CSS classes to apply to the header.
 #' @param headerStyle Inline styles to apply to the header. A named list or
@@ -328,7 +330,7 @@ is.colGroup <- function(x) {
 #' reactable(data, columns = list(
 #'   price_USD = colDef(format = colFormat(prefix = "$", separators = TRUE, digits = 2)),
 #'   price_INR = colDef(format = colFormat(currency = "INR", separators = TRUE, locale = "hi-IN")),
-#'   temp = colDef(format = colFormat(suffix = " °C")),
+#'   temp = colDef(format = colFormat(suffix = " \u00b0C")),
 #'   percent = colDef(format = colFormat(percent = TRUE, digits = 1)),
 #'   date = colDef(format = colFormat(date = TRUE, locale = "en-GB"))
 #' ))
@@ -346,8 +348,8 @@ colFormat <- function(prefix = NULL, suffix = NULL, digits = NULL,
     stop("`suffix` must be a character string")
   }
   if (!is.null(digits)) {
-    if (!is.numeric(digits) || digits < 0 || digits > 20) {
-      stop("`digits` must be a number between 0 and 20")
+    if (!is.numeric(digits) || digits < 0 || digits > 18) {
+      stop("`digits` must be a number between 0 and 18")
     }
     digits <- as.integer(digits)
   }

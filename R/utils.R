@@ -73,7 +73,8 @@ isTagList <- function(x) {
 asReactTag <- function(x) {
   if (is.htmlwidget(x)) {
     if (inherits(x, "reactable")) {
-      # Extract tag for subtables
+      # Extract tag for subtables / nested tables
+      x$x$tag <- htmltools::tagAppendAttributes(x$x$tag, nested = TRUE)
       return(asReactTag(x$x$tag))
     } else {
       tags <- htmltools::as.tags(x)
@@ -102,7 +103,7 @@ asReactTag <- function(x) {
 
   if (!is.tag(x)) {
     # Nodes should be strings for proper hydration
-    if (!is.null(x) && !is.character(x)) {
+    if (!is.null(x) && (!is.character(x) || is.na(x))) {
       x <- format(x)
     }
     return(x)

@@ -38,8 +38,11 @@ test_that("reactable handles invalid args", {
   expect_error(reactable(df, showPageInfo = "true"))
   expect_error(reactable(df, minRows = "2"))
   expect_error(reactable(df, details = "details"))
+  expect_error(reactable(df, defaultExpanded = NULL))
+  expect_error(reactable(df, defaultExpanded = 1:3))
   expect_error(reactable(df, selection = "none"))
   expect_error(reactable(df, selectionId = 123))
+  expect_error(reactable(df, defaultSelected = "12"))
   expect_error(reactable(df, onClick = "function() {}"))
   expect_error(reactable(df, highlight = "true"))
   expect_error(reactable(df, outlined = "true"))
@@ -90,8 +93,8 @@ test_that("reactable", {
                    defaultSortOrder = "desc", defaultSorted = list(x = "asc"),
                    defaultPageSize = 1, showPageSizeOptions = TRUE, pageSizeOptions = c(1, 2),
                    paginationType = "simple", showPagination = FALSE, showPageInfo = FALSE,
-                   minRows = 5, selection = "single", selectionId = "sel",
-                   details = function(i) i, highlight = TRUE,
+                   minRows = 5, details = function(i) i, defaultExpanded = TRUE,
+                   selection = "single", selectionId = "sel", highlight = TRUE,
                    outlined = TRUE, bordered = TRUE, borderless = TRUE, striped = TRUE,
                    compact = TRUE, wrap = FALSE, showSortIcon = FALSE,
                    showSortable = TRUE, class = "tbl", style = list(color = "red"),
@@ -101,8 +104,10 @@ test_that("reactable", {
   data <- data.frame(.rownames = 1, x = "a")
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE)
   columns <- list(
+    list(accessor = ".selection", name = "", type = "NULL"),
     list(accessor = ".details", name = "", type = "NULL", sortable = FALSE,
-         filterable = FALSE,  width = 45, align = "center", details = list("1")),
+         resizable = FALSE, filterable = FALSE,  width = 45, align = "center",
+         details = list("1")),
     list(accessor = ".rownames", name = "", type = "numeric",
          sortable = FALSE, filterable = FALSE),
     list(accessor = "x", name = "x", type = "factor")
@@ -125,6 +130,7 @@ test_that("reactable", {
     showPagination = FALSE,
     showPageInfo = FALSE,
     minRows = 5,
+    defaultExpanded = TRUE,
     selection = "single",
     selectionId = "sel",
     highlight = TRUE,
@@ -158,7 +164,7 @@ test_that("reactable", {
   expect_equal(attribs$columns[[2]]$name, "Y")
 
   # Style
-  tbl <- reactable(data.frame(), style = " border-bottom: 1px solid; top: 50px")
+  tbl <- reactable(data.frame(x = 1), style = " border-bottom: 1px solid; top: 50px")
   attribs <- getAttribs(tbl)
   expect_equal(attribs$style, list("border-bottom" = "1px solid", top = "50px"))
 })
@@ -177,6 +183,16 @@ test_that("data can be a matrix", {
   expect_length(attribs$columns, 2)
 })
 
+test_that("data should have at least one column", {
+  expect_error(reactable(data.frame()), "`data` must have at least one column")
+
+  # Data can have zero rows, as long as it has columns
+  tbl <- reactable(data.frame(x = character(0), y = numeric(0)))
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"x":[],"y":[]}')
+  expect_length(attribs$columns, 2)
+})
+
 test_that("numbers are serialized with max precision", {
   data <- data.frame(x = 0.123456789012345)  # 16 digits
   tbl <- reactable(data)
@@ -189,6 +205,15 @@ test_that("dates/datetimes are serialized in ISO 8601", {
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{"x":["2019-05-06T03:22:15"],"y":["2010-12-30"]}')
+})
+
+test_that("supports Crosstalk", {
+  data <- crosstalk::SharedData$new(data.frame(x = 1, y = "2"))
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"x":[1],"y":["2"]}')
+  expect_equal(attribs$crosstalkKey, data$key())
+  expect_equal(attribs$crosstalkGroup, data$groupName())
 })
 
 test_that("rownames", {
@@ -435,7 +460,7 @@ test_that("column renderers", {
   expect_equal(attribs$columns[[2]]$cell, list("1", "2"))
   expect_equal(attribs$columns[[3]]$cell, list("3 1 z", "3 2 z"))
 
-  # POSIXlt objects should be handled
+  # POSIXlt objects should be handled correctly (mostly just on R <= 3.4)
   data$p <- c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"))
   tbl <- reactable(data, columns = list(
     p = colDef(cell = function(value) value)
@@ -532,7 +557,8 @@ test_that("row details", {
   tbl <- reactable(data, details = function(i) if (i == 1) data[i, "y"])
   attribs <- getAttribs(tbl)
   expected <- list(accessor = ".details", name = "", type = "NULL", sortable = FALSE,
-                   filterable = FALSE, width = 45, align = "center", details = list("a", NULL))
+                   resizable = FALSE, filterable = FALSE, width = 45, align = "center",
+                   details = list("a", NULL))
   expect_equal(attribs$columns[[1]], expected)
 
   # JS renderer
@@ -570,6 +596,13 @@ test_that("row details", {
   tbl <- reactable(data, columns = list(y = colDef(details = function(i) data[i, "y"])))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[2]]$details, list("a", "b"))
+
+  # Details column can be part of column groups
+  tbl <- reactable(data.frame(x = c(1, 2)), details = function(i) i, columnGroups = list(
+    colGroup("group", c(".details", "x"))
+  ))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columnGroups[[1]]$columns, list(".details", "x"))
 })
 
 test_that("html dependencies from rendered content are passed through", {
@@ -632,6 +665,44 @@ test_that("html dependencies from rendered content are passed through", {
   expect_equal(tbl$dependencies, list())
 })
 
+test_that("row selection", {
+  data <- data.frame(x = c(1, 2, 3))
+  tbl <- reactable(data, selection = "single", selectionId = "selected")
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$selection, "single")
+  expect_equal(attribs$selectionId, "selected")
+
+  tbl <- reactable(data, selection = "multiple", defaultSelected = c(1, 3, 2))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$selection, "multiple")
+  expect_equal(attribs$defaultSelected, list(0, 2, 1))
+
+  # defaultSelected should be serialized as an array
+  tbl <- reactable(data, selection = "single", defaultSelected = 3)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$defaultSelected, list(2))
+
+  # Selection column should be customizable
+  tbl <- reactable(data, selection = "single", columns = list(
+    .selection = colDef(width = 100, class = "my-cls")
+  ))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[1]]$name, "")
+  expect_equal(attribs$columns[[1]]$width, 100)
+  expect_equal(attribs$columns[[1]]$className, "my-cls")
+
+  # Selection column can be part of column groups
+  tbl <- reactable(data.frame(x = c(1, 2)), selection = "multiple", columnGroups = list(
+    colGroup("group", c(".selection", "x"))
+  ))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columnGroups[[1]]$columns, list(".selection", "x"))
+
+  # Out of bounds errors
+  expect_error(reactable(data, selection = "single", defaultSelected = c(0, 1)))
+  expect_error(reactable(data, selection = "multiple", defaultSelected = c(2, 4)))
+})
+
 test_that("onClick", {
   data <- data.frame(x = c(1, 2), y = c("a", "b"))
   tbl <- reactable(data, onClick = "expand")
@@ -647,16 +718,33 @@ test_that("onClick", {
   expect_equal(attribs$onClick, JS("(rowInfo, column, state) => {}"))
 })
 
-test_that("column class callbacks", {
-  data <- data.frame(x = c("a", "b", "c"), y = c(2, 4, 6))
+test_that("column class functions", {
+  data <- data.frame(
+    x = c("a", "b", "c"),
+    y = c(2, 4, 6),
+    z = I(list(list(1,2,3), list(4,5,6), list(0,0,0)))
+  )
+
+  # R functions
   tbl <- reactable(data, columns = list(
     x = colDef(class = function(value) if (value != "a") paste0(value, "-cls")),
-    y = colDef(class = function(value, index, name) sprintf("%s-%s-%s", value, index, name))
+    y = colDef(class = function(value, index, name) sprintf("%s-%s-%s", value, index, name)),
+    z = colDef(class = function(values, index) sprintf("%s-%s", length(values), index))
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[1]]$className, list(NULL, "b-cls", "c-cls"))
   expect_equal(attribs$columns[[2]]$className, list("2-1-y", "4-2-y", "6-3-y"))
+  expect_equal(attribs$columns[[3]]$className, list("3-1", "3-2", "3-3"))
 
+  # POSIXlt objects should be handled
+  data$p <- c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))
+  tbl <- reactable(data, columns = list(
+    p = colDef(class = function(value) value)
+  ))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[4]]$class, list("2019-01-01", "2019-05-01", "2019-07-05"))
+
+  # JS functions
   tbl <- reactable(data, columns = list(
     x = colDef(class = JS("rowInfo => 'cls'"))
   ))
@@ -664,18 +752,36 @@ test_that("column class callbacks", {
   expect_equal(attribs$columns[[1]]$className, JS("rowInfo => 'cls'"))
 })
 
-test_that("column style callbacks", {
-  data <- data.frame(x = c("a", "b", "c"), y = c(2, 4, 6))
+test_that("column style functions", {
+  data <- data.frame(
+    x = c("a", "b", "c"),
+    y = c(2, 4, 6),
+    z = I(list(list(1,2,3), list(4,5,6), list(0,0,0)))
+  )
+
+  # R functions
   tbl <- reactable(data, columns = list(
     x = colDef(style = function(value) if (value != "a") "background-color: red"),
-    y = colDef(style = function(value, index, name) list(color = sprintf("%s-%s-%s", value, index, name)))
+    y = colDef(style = function(value, index, name) list(color = sprintf("%s-%s-%s", value, index, name))),
+    z = colDef(style = function(values, index) list(content = sprintf("%s-%s", length(values), index)))
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[1]]$style,
                list(NULL, list("background-color" = "red"), list("background-color" = "red")))
   expect_equal(attribs$columns[[2]]$style,
                list(list(color = "2-1-y"), list(color = "4-2-y"), list(color = "6-3-y")))
+  expect_equal(attribs$columns[[3]]$style,
+               list(list(content = "3-1"), list(content = "3-2"), list(content = "3-3")))
 
+  # POSIXlt objects should be handled
+  data$p <- c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))
+  tbl <- reactable(data, columns = list(
+    p = colDef(style = function(value) value)
+  ))
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[4]]$style, list("2019-01-01", "2019-05-01", "2019-07-05"))
+
+  # JS functions
   tbl <- reactable(data, columns = list(
     x = colDef(style = JS("rowInfo => ({ backgroundColor: 'red' })"))
   ))
@@ -685,11 +791,11 @@ test_that("column style callbacks", {
 
 test_that("rowClass and rowStyle", {
   # rowClass
-  tbl <- reactable(data.frame(), rowClass = "cls")
+  tbl <- reactable(data.frame(x = 1), rowClass = "cls")
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowClassName, "cls")
 
-  tbl <- reactable(data.frame(), rowClass = JS("(rowInfo, state) => 'cls'"))
+  tbl <- reactable(data.frame(x = 1), rowClass = JS("(rowInfo, state) => 'cls'"))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowClassName, JS("(rowInfo, state) => 'cls'"))
 
@@ -699,15 +805,15 @@ test_that("rowClass and rowStyle", {
   expect_equal(attribs$rowClassName, list("row-1", "row-2", "row-3"))
 
   # rowStyle
-  tbl <- reactable(data.frame(), rowStyle = " border-bottom: 1px solid; top: 50px")
+  tbl <- reactable(data.frame(x = 1), rowStyle = " border-bottom: 1px solid; top: 50px")
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowStyle, list("border-bottom" = "1px solid", top = "50px"))
 
-  tbl <- reactable(data.frame(), rowStyle = list(color = "red"))
+  tbl <- reactable(data.frame(x = 1), rowStyle = list(color = "red"))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowStyle, list(color = "red"))
 
-  tbl <- reactable(data.frame(), rowStyle = JS("(rowInfo, state) => ({ color: 'red' })"))
+  tbl <- reactable(data.frame(x = 1), rowStyle = JS("(rowInfo, state) => ({ color: 'red' })"))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowStyle, JS("(rowInfo, state) => ({ color: 'red' })"))
 
@@ -723,8 +829,104 @@ test_that("rowClass and rowStyle", {
                list(list("background-color" = "red"), list(color = "red"), NULL))
 })
 
+test_that("theme", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data, theme = reactableTheme())
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, NULL)
+
+  theme <- reactableTheme(style = list(color = "red"), borderColor = "#555")
+  tbl <- reactable(data, theme = theme)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, theme)
+
+  # Theme function
+  theme <- function() reactableTheme(cellPadding = 13)
+  tbl <- reactable(data, theme = theme)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, theme())
+
+  theme <- function() NULL
+  tbl <- reactable(data, theme = theme)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, NULL)
+
+  # Global theme option
+  theme <- reactableTheme(style = list(color = "red"), borderColor = "#555")
+  old <- options(reactable.theme = theme)
+  on.exit(options(old))
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, theme)
+
+  # Table theme should override global option
+  theme <- reactableTheme(borderWidth = "3px")
+  tbl <- reactable(data, theme = theme)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$theme, theme)
+
+  # Errors
+  expect_error(reactable(data, theme = list()),
+               "`theme` must be a reactable theme object")
+})
+
+test_that("language", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data, language = reactableLang())
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$language, NULL)
+
+  language <- reactableLang(pageNext = "_Next", searchPlaceholder = "_Search", sortLabel = "_Sort {name}")
+  tbl <- reactable(data, language = language)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$language, language)
+
+  # Global language option
+  old <- options(reactable.language = language)
+  on.exit(options(old))
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$language, language)
+
+  # Table language should override global option
+  language <- reactableLang(selectAllRowsLabel = "_Select all rows")
+  tbl <- reactable(data, language = language)
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$language, language)
+
+  # Errors
+  expect_error(reactable(data, language = list()),
+               "`language` must be a reactable language options object")
+})
+
 test_that("columnSortDefs", {
   defaultSorted <- list(x = "asc", y = "desc")
   expected <- list(list(id = "x", desc = FALSE), list(id = "y", desc = TRUE))
   expect_equal(columnSortDefs(defaultSorted), expected)
+})
+
+test_that("reactableOutput", {
+  output <- reactableOutput("mytbl")
+
+  # HTML dependencies should be intact
+  deps <- htmltools::htmlDependencies(output)
+  expect_true(length(deps) > 0)
+
+  # Output container should have data-reactable-output ID set
+  expect_equal(output[[1]][[4]]$attribs[["data-reactable-output"]], "mytbl")
+  expect_equal(output[[1]][[4]]$name, "div")
+  expect_equal(output[[1]][[4]]$attribs$id, "mytbl")
+})
+
+test_that("reactable_html", {
+  html <- reactable_html("id", "color: red", "class")
+  expect_equal(html[[4]], htmltools::tags$div(id = "id", class = "class", style = "color: red"))
+
+  # Text color should be set in R Notebooks
+  old <- options(rstudio.notebook.executing = TRUE)
+  on.exit(options(old))
+  html <- reactable_html(NULL, "color: red", NULL)
+  expect_equal(html[[4]], htmltools::tags$div(style = "color: #333;color: red"))
 })

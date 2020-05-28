@@ -6,8 +6,7 @@
 \alias{renderReactable}
 \title{Shiny bindings for reactable}
 \usage{
-reactableOutput(outputId, width = "auto", height = "auto",
-  inline = FALSE)
+reactableOutput(outputId, width = "auto", height = "auto", inline = FALSE)
 
 renderReactable(expr, env = parent.frame(), quoted = FALSE)
 }
@@ -62,4 +61,9 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 }
 
+}
+\seealso{
+\code{\link[=updateReactable]{updateReactable()}} for updating a reactable instance in Shiny.
+
+\code{\link[=getReactableState]{getReactableState()}} for getting the state of a reactable instance in Shiny.
 }

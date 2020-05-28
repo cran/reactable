@@ -4,21 +4,42 @@
 \alias{colDef}
 \title{Column definitions}
 \usage{
-colDef(name = NULL, aggregate = NULL, sortable = NULL,
-  resizable = NULL, filterable = NULL, show = TRUE,
-  defaultSortOrder = NULL, sortNALast = FALSE, format = NULL,
-  cell = NULL, aggregated = NULL, header = NULL, footer = NULL,
-  details = NULL, html = FALSE, na = "", minWidth = NULL,
-  maxWidth = NULL, width = NULL, align = NULL, class = NULL,
-  style = NULL, headerClass = NULL, headerStyle = NULL,
-  footerClass = NULL, footerStyle = NULL)
+colDef(
+  name = NULL,
+  aggregate = NULL,
+  sortable = NULL,
+  resizable = NULL,
+  filterable = NULL,
+  show = TRUE,
+  defaultSortOrder = NULL,
+  sortNALast = FALSE,
+  format = NULL,
+  cell = NULL,
+  aggregated = NULL,
+  header = NULL,
+  footer = NULL,
+  details = NULL,
+  html = FALSE,
+  na = "",
+  minWidth = NULL,
+  maxWidth = NULL,
+  width = NULL,
+  align = NULL,
+  class = NULL,
+  style = NULL,
+  headerClass = NULL,
+  headerStyle = NULL,
+  footerClass = NULL,
+  footerStyle = NULL
+)
 }
 \arguments{
 \item{name}{Column header name.}
 
 \item{aggregate}{Aggregate function. The name of a built-in aggregate
 function or a custom \code{\link[=JS]{JS()}} aggregate function. Built-in aggregate functions
-are: \code{"mean"}, \code{"sum"}, \code{"max"}, \code{"min"}, \code{"count"}, \code{"unique"}, \code{"frequency"}.}
+are: \code{"mean"}, \code{"sum"}, \code{"max"}, \code{"min"}, \code{"median"}, \code{"count"},
+\code{"unique"}, \code{"frequency"}.}
 
 \item{sortable}{Enable sorting? Overrides the table option.}
 
@@ -56,7 +77,7 @@ R function that takes two arguments, the column values and column name, or a
 that takes a row index argument or a \code{\link[=JS]{JS()}} function that takes a row info object
 as an argument. Cannot be used on a grouping column.}
 
-\item{html}{Render cells as HTML? HTML strings are escaped by default.}
+\item{html}{Render content as HTML? Raw HTML strings are escaped by default.}
 
 \item{na}{String to display for missing values (i.e. \link{NA} or \link{NaN}).
 By default, missing values are displayed as blank cells.}

@@ -15,12 +15,13 @@
 #' R console.
 #'
 #' @param data A data frame or matrix.
+#'
+#'   Can also be a [`crosstalk::SharedData`] object that wraps a data frame.
 #' @param columns Named list of column definitions. See [colDef()].
 #' @param columnGroups List of column group definitions. See [colGroup()].
 #' @param rownames Show row names? Defaults to `TRUE` if the data has row names.
 #'
-#'  To customize or group the row names column, use `".rownames"` as the
-#'  column name.
+#'   To customize the row names column, use `".rownames"` as the column name.
 #' @param groupBy Character vector of column names to group by.
 #' @param sortable Enable sorting? Defaults to `TRUE`.
 #' @param resizable Enable column resizing?
@@ -48,10 +49,18 @@
 #'   that takes a row index argument or a [JS()] function that takes
 #'   a row info object as an argument. Can also be a [colDef()] to customize the
 #'   details expander column.
+#' @param defaultExpanded Expand all rows by default?
 #' @param selection Enable row selection? Either `"multiple"` or `"single"` for
 #'   multiple or single row selection.
+#'
+#'   To get the selected rows in Shiny, use [getReactableState()].
+#'
+#'   To customize the selection column, use `".selection"` as the column name.
 #' @param selectionId Shiny input ID for the selected rows. The selected rows are
-#'   represented as a vector of row indices, or `NULL` if no rows are selected.
+#'   given as a numeric vector of row indices, or `NULL` if no rows are selected.
+#'   **NOTE:** `selectionId` will be deprecated in a future release.
+#'   Use [getReactableState()] to get the selected rows in Shiny instead.
+#' @param defaultSelected A numeric vector of default selected row indices.
 #' @param onClick Action to take when clicking a cell. Either `"expand"` to expand
 #'   the row, `"select"` to select the row, or a [JS()] function that takes a
 #'   row info object, column info object, and table state object as arguments.
@@ -83,6 +92,11 @@
 #'   Defaults to `TRUE`.
 #' @param width Width in pixels. Defaults to `"auto"` for automatic sizing.
 #' @param height Height in pixels. Defaults to `"auto"` for automatic sizing.
+#' @param theme Theme options for the table, specified by
+#'   [reactableTheme()]. Defaults to the global `reactable.theme` option.
+#'   Can also be a function that returns a [reactableTheme()] or `NULL`.
+#' @param language Language options for the table, specified by
+#'   [reactableLang()]. Defaults to the global `reactable.language` option.
 #' @param elementId Element ID for the widget.
 #' @return A `reactable` HTML widget that can be used in R Markdown documents
 #'   and Shiny applications, or viewed from an R console.
@@ -137,19 +151,37 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
                       pagination = TRUE, defaultPageSize = 10,
                       showPageSizeOptions = FALSE, pageSizeOptions = c(10, 25, 50, 100),
                       paginationType = "numbers", showPagination = NULL, showPageInfo = TRUE,
-                      minRows = 1, details = NULL, selection = NULL, selectionId = NULL,
-                      onClick = NULL,
+                      minRows = 1, details = NULL, defaultExpanded = FALSE,
+                      selection = NULL, selectionId = NULL,
+                      defaultSelected = NULL, onClick = NULL,
                       highlight = FALSE, outlined = FALSE, bordered = FALSE,
                       borderless = FALSE, striped = FALSE, compact = FALSE, wrap = TRUE,
                       showSortIcon = TRUE, showSortable = FALSE,
                       class = NULL, style = NULL, rowClass = NULL, rowStyle = NULL,
                       fullWidth = TRUE, width = "auto", height = "auto",
+                      theme = getOption("reactable.theme"),
+                      language = getOption("reactable.language"),
                       elementId = NULL) {
+
+  crosstalkKey <- NULL
+  crosstalkGroup <- NULL
+  dependencies <- list()
+  if (requireNamespace("crosstalk", quietly = TRUE)) {
+    if (crosstalk::is.SharedData(data)) {
+      crosstalkKey <- data$key()
+      crosstalkGroup <- data$groupName()
+      data <- data$origData()
+      dependencies <- crosstalk::crosstalkLibs()
+    }
+  }
 
   if (!(is.data.frame(data) || is.matrix(data))) {
     stop("`data` must be a data frame or matrix")
   } else if (is.matrix(data)) {
     data <- as.data.frame(data, stringsAsFactors = FALSE)
+  }
+  if (ncol(data) == 0) {
+    stop("`data` must have at least one column")
   }
 
   if (is.null(rownames)) {
@@ -175,27 +207,6 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     columns[[rownamesKey]] <- rownamesColumn
   }
 
-  if (!is.null(columns)) {
-    if (!isNamedList(columns) || !all(sapply(columns, is.colDef))) {
-      stop("`columns` must be a named list of column definitions")
-    }
-    if (!all(names(columns) %in% colnames(data))) {
-      stop("`columns` names must exist in `data`")
-    }
-  }
-  if (!is.null(columnGroups)) {
-    if (!all(sapply(columnGroups, is.colGroup))) {
-      stop("`columnGroups` must be a list of column group definitions")
-    }
-    for (group in columnGroups) {
-      if (length(group$columns) == 0) {
-        stop("`columnGroups` groups must contain at least one column")
-      }
-      if (!all(group$columns %in% colnames(data))) {
-        stop("`columnGroups` columns must exist in `data`")
-      }
-    }
-  }
   if (!is.null(groupBy)) {
     if (!all(groupBy %in% colnames(data))) {
       stop("`groupBy` columns must exist in `data`")
@@ -216,11 +227,13 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   if (!is.logical(searchable)) {
     stop("`searchable` must be TRUE or FALSE")
   }
+
   columnKeys <- colnames(data)
   if (!is.null(details)) {
     detailsKey <- ".details"
     columnKeys <- c(detailsKey, columnKeys)
-    detailsColumn <- colDef(name = "", sortable = FALSE, filterable = FALSE, width = 45, align = "center")
+    detailsColumn <- colDef(name = "", sortable = FALSE, filterable = FALSE,
+                            resizable = FALSE, width = 45, align = "center")
     if (is.colDef(details)) {
       detailsColumn <- mergeLists(detailsColumn, details)
     } else {
@@ -228,6 +241,15 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     }
     # Prepend column
     columns <- c(stats::setNames(list(detailsColumn), detailsKey), columns)
+  }
+  if (!is.null(selection)) {
+    selectionKey <- ".selection"
+    columnKeys <- c(selectionKey, columnKeys)
+    selectionColumn <- colDef(name = "")
+    if (selectionKey %in% names(columns)) {
+      selectionColumn <- mergeLists(selectionColumn, columns[[selectionKey]])
+    }
+    columns[[selectionKey]] <- selectionColumn
   }
   if (!is.null(defaultColDef)) {
     if (!is.colDef(defaultColDef)) {
@@ -246,6 +268,28 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
       mergeLists(defaultColGroup, group)
     })
   }
+  if (!is.null(columns)) {
+    if (!isNamedList(columns) || !all(sapply(columns, is.colDef))) {
+      stop("`columns` must be a named list of column definitions")
+    }
+    if (!all(names(columns) %in% columnKeys)) {
+      stop("`columns` names must exist in `data`")
+    }
+  }
+  if (!is.null(columnGroups)) {
+    if (!all(sapply(columnGroups, is.colGroup))) {
+      stop("`columnGroups` must be a list of column group definitions")
+    }
+    for (group in columnGroups) {
+      if (length(group$columns) == 0) {
+        stop("`columnGroups` groups must contain at least one column")
+      }
+      if (!all(group$columns %in% columnKeys)) {
+        stop("`columnGroups` columns must exist in `data`")
+      }
+    }
+  }
+
   if (!isSortOrder(defaultSortOrder)) {
     stop('`defaultSortOrder` must be "asc" or "desc"')
   }
@@ -296,11 +340,24 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   if (!is.numeric(minRows)) {
     stop("`minRows` must be numeric")
   }
+  if (!is.logical(defaultExpanded)) {
+    stop("`defaultExpanded` must be TRUE or FALSE")
+  }
   if (!is.null(selection) && !selection %in% c("multiple", "single")) {
     stop('`selection` must be "multiple" or "single"')
   }
   if (!is.null(selectionId) && !is.character(selectionId)) {
     stop("`selectionId` must be a character")
+  }
+  if (!is.null(defaultSelected)) {
+    if (!is.numeric(defaultSelected)) {
+      stop("`defaultSelected` must be numeric")
+    }
+    if (any(defaultSelected < 1 | defaultSelected > nrow(data))) {
+      stop("`defaultSelected` row indices must be within range")
+    }
+    # Convert to 0-based indexing
+    defaultSelected <- as.list(defaultSelected - 1)
   }
   if (!is.null(onClick) && !onClick %in% c("expand", "select") && !is.JS(onClick)) {
     stop('`onClick` must be "expand", "select", or a JS function')
@@ -366,7 +423,18 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   width <- htmltools::validateCssUnit(width)
   height <- htmltools::validateCssUnit(height)
 
-  dependencies <- list()
+  if (!is.null(theme)) {
+    if (is.function(theme)) {
+      theme <- callFunc(theme)
+    }
+    if (!is.null(theme) && !is.reactableTheme(theme)) {
+      stop("`theme` must be a reactable theme object")
+    }
+  }
+  if (!is.null(language) && !is.reactableLang(language)) {
+    stop("`language` must be a reactable language options object")
+  }
+
   addDependencies <- function(x) {
     # Dedupe dependencies
     for (dep in htmltools::findDependencies(x)) {
@@ -388,10 +456,8 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
 
     cell <- column[["cell"]]
     if (is.function(cell)) {
-      # [[ subsetting doesn't work well with POSIXlt objects
-      subsetter <- if (is.POSIXlt(data[[key]])) `[` else `[[`
       content <- lapply(seq_len(nrow(data)), function(index) {
-        value <- subsetter(data, index, key)
+        value <- data[[key]][[index]]
         callFunc(cell, value, index, key)
       })
       column$cell <- lapply(content, asReactTag)
@@ -433,7 +499,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     className <- column[["className"]]
     if (is.function(className)) {
       classes <- lapply(seq_len(nrow(data)), function(index) {
-        value <- data[index, key]
+        value <- data[[key]][[index]]
         callFunc(className, value, index, key)
       })
       column$className <- classes
@@ -442,7 +508,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     style <- column[["style"]]
     if (is.function(style)) {
       style <- lapply(seq_len(nrow(data)), function(index) {
-        value <- data[index, key]
+        value <- data[[key]][[index]]
         callFunc(style, value, index, key)
       })
       column$style <- lapply(style, asReactStyle)
@@ -468,7 +534,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   }
 
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE, digits = NA,
-                           POSIXt = "ISO8601")
+                           POSIXt = "ISO8601", Date = "ISO8601")
 
   component <- reactR::component("Reactable", list(
     data = data,
@@ -488,8 +554,10 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     showPagination = if (!is.null(showPagination)) showPagination,
     showPageInfo = showPageInfo,
     minRows = minRows,
+    defaultExpanded = if (defaultExpanded) defaultExpanded,
     selection = selection,
     selectionId = selectionId,
+    defaultSelected = defaultSelected,
     onClick = onClick,
     highlight = if (highlight) TRUE,
     outlined = if (outlined) TRUE,
@@ -507,6 +575,10 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     inline = if (!fullWidth) TRUE,
     width = if (width != "auto") width,
     height = if (height != "auto") height,
+    theme = theme,
+    language = language,
+    crosstalkKey = crosstalkKey,
+    crosstalkGroup = crosstalkGroup,
     dataKey = digest::digest(list(data, cols))
   ))
 
@@ -553,6 +625,10 @@ columnSortDefs <- function(defaultSorted) {
 #' See the [online demo](https://glin.github.io/reactable/articles/shiny-demo.html)
 #' for additional examples of using reactable in Shiny.
 #'
+#' @seealso [updateReactable()] for updating a reactable instance in Shiny.
+#'
+#'  [getReactableState()] for getting the state of a reactable instance in Shiny.
+#'
 #' @examples
 #' # Run in an interactive R session
 #' if (interactive()) {
@@ -576,8 +652,19 @@ columnSortDefs <- function(defaultSorted) {
 #'
 #' @export
 reactableOutput <- function(outputId, width = "auto", height = "auto", inline = FALSE) {
-  htmlwidgets::shinyWidgetOutput(outputId, "reactable", width, height,
-                                 inline = inline, package = "reactable")
+  output <- htmlwidgets::shinyWidgetOutput(outputId, "reactable", width, height,
+                                           inline = inline, package = "reactable")
+  # Add attribute to Shiny output containers to differentiate them from static widgets
+  addOutputId <- function(x) {
+    if (isTagList(x)) {
+      x[] <- lapply(x, addOutputId)
+    } else if (is.tag(x)) {
+      x <- htmltools::tagAppendAttributes(x, "data-reactable-output" = outputId)
+    }
+    x
+  }
+  output <- addOutputId(output)
+  output
 }
 
 #' @rdname reactable-shiny
@@ -596,6 +683,11 @@ renderReactable <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' @param ... Additional arguments.
 #' @keywords internal
 reactable_html <- function(id, style, class, ...) {
+  # Set text color in R Notebooks to prevent contrast issues when
+  # using a dark editor theme and htmltools 0.4.0.
+  if (isTRUE(getOption("rstudio.notebook.executing"))) {
+    style <- paste0("color: #333;", style)
+  }
   htmltools::tagList(
     # Necessary for RStudio viewer version < 1.2
     reactR::html_dependency_corejs(),

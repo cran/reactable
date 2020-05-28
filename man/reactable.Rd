@@ -4,24 +4,59 @@
 \alias{reactable}
 \title{Create an interactive data table}
 \usage{
-reactable(data, columns = NULL, columnGroups = NULL, rownames = NULL,
-  groupBy = NULL, sortable = TRUE, resizable = FALSE,
-  filterable = FALSE, searchable = FALSE, defaultColDef = NULL,
-  defaultColGroup = NULL, defaultSortOrder = "asc",
-  defaultSorted = NULL, pagination = TRUE, defaultPageSize = 10,
-  showPageSizeOptions = FALSE, pageSizeOptions = c(10, 25, 50, 100),
-  paginationType = "numbers", showPagination = NULL,
-  showPageInfo = TRUE, minRows = 1, details = NULL,
-  selection = NULL, selectionId = NULL, onClick = NULL,
-  highlight = FALSE, outlined = FALSE, bordered = FALSE,
-  borderless = FALSE, striped = FALSE, compact = FALSE,
-  wrap = TRUE, showSortIcon = TRUE, showSortable = FALSE,
-  class = NULL, style = NULL, rowClass = NULL, rowStyle = NULL,
-  fullWidth = TRUE, width = "auto", height = "auto",
-  elementId = NULL)
+reactable(
+  data,
+  columns = NULL,
+  columnGroups = NULL,
+  rownames = NULL,
+  groupBy = NULL,
+  sortable = TRUE,
+  resizable = FALSE,
+  filterable = FALSE,
+  searchable = FALSE,
+  defaultColDef = NULL,
+  defaultColGroup = NULL,
+  defaultSortOrder = "asc",
+  defaultSorted = NULL,
+  pagination = TRUE,
+  defaultPageSize = 10,
+  showPageSizeOptions = FALSE,
+  pageSizeOptions = c(10, 25, 50, 100),
+  paginationType = "numbers",
+  showPagination = NULL,
+  showPageInfo = TRUE,
+  minRows = 1,
+  details = NULL,
+  defaultExpanded = FALSE,
+  selection = NULL,
+  selectionId = NULL,
+  defaultSelected = NULL,
+  onClick = NULL,
+  highlight = FALSE,
+  outlined = FALSE,
+  bordered = FALSE,
+  borderless = FALSE,
+  striped = FALSE,
+  compact = FALSE,
+  wrap = TRUE,
+  showSortIcon = TRUE,
+  showSortable = FALSE,
+  class = NULL,
+  style = NULL,
+  rowClass = NULL,
+  rowStyle = NULL,
+  fullWidth = TRUE,
+  width = "auto",
+  height = "auto",
+  theme = getOption("reactable.theme"),
+  language = getOption("reactable.language"),
+  elementId = NULL
+)
 }
 \arguments{
-\item{data}{A data frame or matrix.}
+\item{data}{A data frame or matrix.
+
+Can also be a \code{\link[crosstalk:SharedData]{crosstalk::SharedData}} object that wraps a data frame.}
 
 \item{columns}{Named list of column definitions. See \code{\link[=colDef]{colDef()}}.}
 
@@ -29,8 +64,7 @@ reactable(data, columns = NULL, columnGroups = NULL, rownames = NULL,
 
 \item{rownames}{Show row names? Defaults to \code{TRUE} if the data has row names.
 
-To customize or group the row names column, use \code{".rownames"} as the
-column name.}
+To customize the row names column, use \code{".rownames"} as the column name.}
 
 \item{groupBy}{Character vector of column names to group by.}
 
@@ -77,11 +111,21 @@ that takes a row index argument or a \code{\link[=JS]{JS()}} function that takes
 a row info object as an argument. Can also be a \code{\link[=colDef]{colDef()}} to customize the
 details expander column.}
 
+\item{defaultExpanded}{Expand all rows by default?}
+
 \item{selection}{Enable row selection? Either \code{"multiple"} or \code{"single"} for
-multiple or single row selection.}
+multiple or single row selection.
+
+To get the selected rows in Shiny, use \code{\link[=getReactableState]{getReactableState()}}.
+
+To customize the selection column, use \code{".selection"} as the column name.}
 
 \item{selectionId}{Shiny input ID for the selected rows. The selected rows are
-represented as a vector of row indices, or \code{NULL} if no rows are selected.}
+given as a numeric vector of row indices, or \code{NULL} if no rows are selected.
+\strong{NOTE:} \code{selectionId} will be deprecated in a future release.
+Use \code{\link[=getReactableState]{getReactableState()}} to get the selected rows in Shiny instead.}
+
+\item{defaultSelected}{A numeric vector of default selected row indices.}
 
 \item{onClick}{Action to take when clicking a cell. Either \code{"expand"} to expand
 the row, \code{"select"} to select the row, or a \code{\link[=JS]{JS()}} function that takes a
@@ -131,6 +175,13 @@ Defaults to \code{TRUE}.}
 
 \item{height}{Height in pixels. Defaults to \code{"auto"} for automatic sizing.}
 
+\item{theme}{Theme options for the table, specified by
+\code{\link[=reactableTheme]{reactableTheme()}}. Defaults to the global \code{reactable.theme} option.
+Can also be a function that returns a \code{\link[=reactableTheme]{reactableTheme()}} or \code{NULL}.}
+
+\item{language}{Language options for the table, specified by
+\code{\link[=reactableLang]{reactableLang()}}. Defaults to the global \code{reactable.language} option.}
+
 \item{elementId}{Element ID for the widget.}
 }
 \value{
@@ -163,7 +214,7 @@ reactable(iris, groupBy = "Species", columns = list(
 reactable(iris, details = function(index) {
   htmltools::div(
     "Details for row: ", index,
-    htmltools::tags$pre(paste(capture.output(iris[index, ]), collapse = "\\n"))
+    htmltools::tags$pre(paste(capture.output(iris[index, ]), collapse = "\n"))
   )
 })
 
