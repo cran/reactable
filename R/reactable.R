@@ -1,5 +1,5 @@
 #' @details
-#' See the [online documentation](https://glin.github.io/reactable) for
+#' See the [online documentation](https://glin.github.io/reactable/) for
 #' examples and an extensive usage guide.
 #' @keywords internal
 #' @import htmlwidgets
@@ -23,6 +23,8 @@
 #'
 #'   To customize the row names column, use `".rownames"` as the column name.
 #' @param groupBy Character vector of column names to group by.
+#'
+#'   To aggregate data when rows are grouped, use the `aggregate` argument in [colDef()].
 #' @param sortable Enable sorting? Defaults to `TRUE`.
 #' @param resizable Enable column resizing?
 #' @param filterable Enable column filtering?
@@ -32,7 +34,7 @@
 #'   See [colGroup()].
 #' @param defaultSortOrder Default sort order. Either `"asc"` for ascending
 #'   order or `"desc"` for descending order. Defaults to `"asc"`.
-#' @param defaultSorted Optional vector of column names to sort by default.
+#' @param defaultSorted Character vector of column names to sort by default.
 #'   Or to customize sort order, a named list with values of `"asc"` or `"desc"`.
 #' @param pagination Enable pagination? Defaults to `TRUE`.
 #' @param defaultPageSize Default page size for the table. Defaults to 10.
@@ -90,8 +92,10 @@
 #'   camelCased property names.
 #' @param fullWidth Stretch the table to fill the full width of its container?
 #'   Defaults to `TRUE`.
-#' @param width Width in pixels. Defaults to `"auto"` for automatic sizing.
-#' @param height Height in pixels. Defaults to `"auto"` for automatic sizing.
+#' @param width Width of the table in pixels. Defaults to `"auto"` for automatic sizing.
+#'
+#'   To set the width of a column, see [colDef()].
+#' @param height Height of the table in pixels. Defaults to `"auto"` for automatic sizing.
 #' @param theme Theme options for the table, specified by
 #'   [reactableTheme()]. Defaults to the global `reactable.theme` option.
 #'   Can also be a function that returns a [reactableTheme()] or `NULL`.
@@ -102,11 +106,14 @@
 #'   and Shiny applications, or viewed from an R console.
 #'
 #' @note
-#' See the [online documentation](https://glin.github.io/reactable) for
+#' See the [online documentation](https://glin.github.io/reactable/) for
 #' additional details and examples.
 #'
-#' @seealso [renderReactable()] and [reactableOutput()] for using reactable
+#' @seealso
+#' * [renderReactable()] and [reactableOutput()] for using reactable
 #'   in Shiny applications or interactive R Markdown documents.
+#' * [colDef()], [colFormat()], and [colGroup()] to customize columns.
+#' * [reactableTheme()] and [reactableLang()] to customize the table.
 #'
 #' @examples
 #' # Basic usage
@@ -168,7 +175,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   dependencies <- list()
   if (requireNamespace("crosstalk", quietly = TRUE)) {
     if (crosstalk::is.SharedData(data)) {
-      crosstalkKey <- data$key()
+      crosstalkKey <- as.list(data$key())
       crosstalkGroup <- data$groupName()
       data <- data$origData()
       dependencies <- crosstalk::crosstalkLibs()
@@ -536,6 +543,11 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE, digits = NA,
                            POSIXt = "ISO8601", Date = "ISO8601")
 
+  # Create a unique key for the data. The key is used to optimize performance of
+  # row selection and expansion, and to fully reset state on data changes (for
+  # tables in Shiny).
+  dataKey <- digest::digest(list(data, cols))
+
   component <- reactR::component("Reactable", list(
     data = data,
     columns = cols,
@@ -579,7 +591,8 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     language = language,
     crosstalkKey = crosstalkKey,
     crosstalkGroup = crosstalkGroup,
-    dataKey = digest::digest(list(data, cols))
+    dataKey = dataKey,
+    key = dataKey
   ))
 
   htmlwidgets::createWidget(
@@ -689,7 +702,7 @@ reactable_html <- function(id, style, class, ...) {
     style <- paste0("color: #333;", style)
   }
   htmltools::tagList(
-    # Necessary for RStudio viewer version < 1.2
+    # Necessary for RStudio Viewer version < 1.2 and IE11
     reactR::html_dependency_corejs(),
     reactR::html_dependency_react(),
     reactR::html_dependency_reacttools(),

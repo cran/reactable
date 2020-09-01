@@ -79,7 +79,8 @@ test_that("reactable", {
     paginationType = "numbers",
     showPageInfo = TRUE,
     minRows = 1,
-    dataKey = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns)),
+    key = digest::digest(list(data, columns))
   )
   expect_equal(attribs, expected)
   expect_equal(tbl$width, "auto")
@@ -147,7 +148,8 @@ test_that("reactable", {
     inline = TRUE,
     width = "400px",
     height = "100%",
-    dataKey = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns)),
+    key = digest::digest(list(data, columns))
   )
   expect_equal(attribs, expected)
   expect_equal(tbl$width, "400px")
@@ -208,11 +210,31 @@ test_that("dates/datetimes are serialized in ISO 8601", {
 })
 
 test_that("supports Crosstalk", {
+  data <- crosstalk::SharedData$new(
+    data.frame(x = c(1, 2), y = c("a", "b"), stringsAsFactors = FALSE),
+    key = ~y,
+    group = "group"
+  )
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"x":[1,2],"y":["a","b"]}')
+  expect_equal(attribs$crosstalkKey, list("a", "b"))
+  expect_equal(attribs$crosstalkGroup, "group")
+
+  # Keys with length 1 should be serialized as arrays
   data <- crosstalk::SharedData$new(data.frame(x = 1, y = "2"))
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{"x":[1],"y":["2"]}')
-  expect_equal(attribs$crosstalkKey, data$key())
+  expect_equal(attribs$crosstalkKey, list("1"))
+  expect_equal(attribs$crosstalkGroup, data$groupName())
+
+  # Data with list-columns
+  data <- crosstalk::SharedData$new(data.frame(x = I(list(list(1,2,3), list(x = 1)))), key = ~x)
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"x":[[[1],[2],[3]],{"x":[1]}]}')
+  expect_equal(attribs$crosstalkKey, I(list(list(1,2,3), list(x = 1))))
   expect_equal(attribs$crosstalkGroup, data$groupName())
 })
 
@@ -742,7 +764,8 @@ test_that("column class functions", {
     p = colDef(class = function(value) value)
   ))
   attribs <- getAttribs(tbl)
-  expect_equal(attribs$columns[[4]]$class, list("2019-01-01", "2019-05-01", "2019-07-05"))
+  expect_equal(attribs$columns[[4]]$className,
+               list(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05")))
 
   # JS functions
   tbl <- reactable(data, columns = list(
@@ -779,7 +802,8 @@ test_that("column style functions", {
     p = colDef(style = function(value) value)
   ))
   attribs <- getAttribs(tbl)
-  expect_equal(attribs$columns[[4]]$style, list("2019-01-01", "2019-05-01", "2019-07-05"))
+  expect_equal(attribs$columns[[4]]$style,
+               list(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05")))
 
   # JS functions
   tbl <- reactable(data, columns = list(

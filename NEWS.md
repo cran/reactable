@@ -1,3 +1,27 @@
+# reactable 0.2.1
+
+### New features
+
+* `updateReactable()` gains a `data` argument to update the data of a reactable
+  instance in Shiny ([#49](https://github.com/glin/reactable/issues/49)).
+
+### Bug fixes
+
+* Row selection columns now display correctly in tables with column groups
+  ([#52](https://github.com/glin/reactable/issues/52)).
+* `defaultSelected` now works correctly with Crosstalk linked selection.
+* Crosstalk selection and filtering now works with nested and dynamically
+  rendered tables [#57](https://github.com/glin/reactable/issues/57)).
+* Tables now display correctly for Crosstalk `SharedData` objects with zero or one rows.
+* Shiny UI elements in expanded row details are now properly removed when
+  collapsed on page changes.
+* `colFormat()` now always formats numbers as a localized string when `locales`
+  is specified.
+* Table rows no longer stretch to fill the height of the container
+  ([#69](https://github.com/glin/reactable/issues/69)). To make rows stretch
+  again, use a theme like `reactableTheme(tableBodyStyle = list(flex = "auto"))`.
+* Multi-sorting no longer selects text in column headers.
+
 # reactable 0.2.0
 
 ### New features

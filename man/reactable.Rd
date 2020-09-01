@@ -66,7 +66,9 @@ Can also be a \code{\link[crosstalk:SharedData]{crosstalk::SharedData}} object t
 
 To customize the row names column, use \code{".rownames"} as the column name.}
 
-\item{groupBy}{Character vector of column names to group by.}
+\item{groupBy}{Character vector of column names to group by.
+
+To aggregate data when rows are grouped, use the \code{aggregate} argument in \code{\link[=colDef]{colDef()}}.}
 
 \item{sortable}{Enable sorting? Defaults to \code{TRUE}.}
 
@@ -84,7 +86,7 @@ See \code{\link[=colGroup]{colGroup()}}.}
 \item{defaultSortOrder}{Default sort order. Either \code{"asc"} for ascending
 order or \code{"desc"} for descending order. Defaults to \code{"asc"}.}
 
-\item{defaultSorted}{Optional vector of column names to sort by default.
+\item{defaultSorted}{Character vector of column names to sort by default.
 Or to customize sort order, a named list with values of \code{"asc"} or \code{"desc"}.}
 
 \item{pagination}{Enable pagination? Defaults to \code{TRUE}.}
@@ -171,9 +173,11 @@ camelCased property names.}
 \item{fullWidth}{Stretch the table to fill the full width of its container?
 Defaults to \code{TRUE}.}
 
-\item{width}{Width in pixels. Defaults to \code{"auto"} for automatic sizing.}
+\item{width}{Width of the table in pixels. Defaults to \code{"auto"} for automatic sizing.
 
-\item{height}{Height in pixels. Defaults to \code{"auto"} for automatic sizing.}
+To set the width of a column, see \code{\link[=colDef]{colDef()}}.}
+
+\item{height}{Height of the table in pixels. Defaults to \code{"auto"} for automatic sizing.}
 
 \item{theme}{Theme options for the table, specified by
 \code{\link[=reactableTheme]{reactableTheme()}}. Defaults to the global \code{reactable.theme} option.
@@ -195,7 +199,7 @@ used in R Markdown documents and Shiny applications, or viewed from an
 R console.
 }
 \note{
-See the \href{https://glin.github.io/reactable}{online documentation} for
+See the \href{https://glin.github.io/reactable/}{online documentation} for
 additional details and examples.
 }
 \examples{
@@ -234,6 +238,10 @@ reactable(sleep, columns = list(
 
 }
 \seealso{
-\code{\link[=renderReactable]{renderReactable()}} and \code{\link[=reactableOutput]{reactableOutput()}} for using reactable
+\itemize{
+\item \code{\link[=renderReactable]{renderReactable()}} and \code{\link[=reactableOutput]{reactableOutput()}} for using reactable
 in Shiny applications or interactive R Markdown documents.
+\item \code{\link[=colDef]{colDef()}}, \code{\link[=colFormat]{colFormat()}}, and \code{\link[=colGroup]{colGroup()}} to customize columns.
+\item \code{\link[=reactableTheme]{reactableTheme()}} and \code{\link[=reactableLang]{reactableLang()}} to customize the table.
+}
 }

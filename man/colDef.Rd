@@ -36,10 +36,12 @@ colDef(
 \arguments{
 \item{name}{Column header name.}
 
-\item{aggregate}{Aggregate function. The name of a built-in aggregate
-function or a custom \code{\link[=JS]{JS()}} aggregate function. Built-in aggregate functions
-are: \code{"mean"}, \code{"sum"}, \code{"max"}, \code{"min"}, \code{"median"}, \code{"count"},
-\code{"unique"}, \code{"frequency"}.}
+\item{aggregate}{Aggregate function to use when rows are grouped. The name
+of a built-in aggregate function or a custom \code{\link[=JS]{JS()}} aggregate function.
+Built-in aggregate functions are: \code{"mean"}, \code{"sum"}, \code{"max"}, \code{"min"},
+\code{"median"}, \code{"count"}, \code{"unique"}, and \code{"frequency"}.
+
+To enable row grouping, use the \code{groupBy} argument in \code{\link[=reactable]{reactable()}}.}
 
 \item{sortable}{Enable sorting? Overrides the table option.}
 
@@ -82,11 +84,11 @@ as an argument. Cannot be used on a grouping column.}
 \item{na}{String to display for missing values (i.e. \link{NA} or \link{NaN}).
 By default, missing values are displayed as blank cells.}
 
-\item{minWidth}{Min width of the column in pixels.}
+\item{minWidth}{Minimum width of the column in pixels. Defaults to 100.}
 
-\item{maxWidth}{Max width of the column in pixels.}
+\item{maxWidth}{Maximum width of the column in pixels.}
 
-\item{width}{Fixed width of the column in pixels. Overrides minWidth and maxWidth.}
+\item{width}{Fixed width of the column in pixels. Overrides \code{minWidth} and \code{maxWidth}.}
 
 \item{align}{Column alignment. One of \code{"left"}, \code{"right"}, \code{"center"}.}
 
@@ -124,7 +126,7 @@ A column definition object that can be used to customize columns
 in \code{reactable()}.
 }
 \description{
-Column definitions
+Use \code{colDef()} to customize the columns in a table.
 }
 \examples{
 reactable(
