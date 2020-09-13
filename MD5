@@ -1,7 +1,7 @@
-428b97c9004662a34a3612cd89c8b957 *DESCRIPTION
+d81b36dde4d533c9eec811dd258c4e73 *DESCRIPTION
 18c28e9f5fc1b48811f34969467049f2 *LICENSE
 d3673963249fe7b68b58a8d003692371 *NAMESPACE
-ebcfa0cd6fc361cf2607b8c1b975631a *NEWS.md
+c62438cb83e6db093d1ce4b20a96294e *NEWS.md
 9f09cbd98deea93d06ebe728fd9bd81b *R/columns.R
 39a7e1cd7b23ed1cfad8a481008b936d *R/language.R
 4d9222764959d0d45972f9e2763f43fe *R/reactable.R
@@ -12,8 +12,8 @@ a333e561dcb348e32b9569fd44d96bb7 *R/theme.R
 5d5dd2dcc6424fb1f785fb377922d15f *inst/examples/app/app.R
 e55d00a7d6e6bef10d95827feedb055c *inst/examples/app/assets/styles.css
 d0de30465f2ba787f5c170871ff8f6fa *inst/examples/shiny-data-streaming.R
-39d06b0f2cd9fab0e4b15607363eec3a *inst/htmlwidgets/reactable.js
-77f018ddb8ec6af696f5f06a2ddf563c *inst/htmlwidgets/reactable.js.map
+40f223c91a09dd6e5a4b81caac956f51 *inst/htmlwidgets/reactable.js
+d3d20ee43dffb10615f93d572970f41a *inst/htmlwidgets/reactable.js.map
 5176a60a4f30e3c3d6486ae2d415c916 *inst/htmlwidgets/reactable.yaml
 d6b443dacbf77335cab929dd27f68d2b *man/colDef.Rd
 6ed23250e85607eeb0e81fac3f39af83 *man/colFormat.Rd
