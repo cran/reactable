@@ -1,7 +1,7 @@
 Package: reactable
 Type: Package
 Title: Interactive Data Tables Based on 'React Table'
-Version: 0.2.2
+Version: 0.2.3
 Authors@R: c(
     person("Greg", "Lin", email = "glin@glin.io", role = c("aut", "cre")),
     person("Tanner", "Linsley", role = c("ctb", "cph"), comment = "React Table library"),
@@ -21,12 +21,12 @@ Suggests: covr, crosstalk, dplyr, leaflet, MASS, rmarkdown, shiny,
         sparkline, testthat
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2020-09-13 19:36:48 UTC; greg
+Packaged: 2020-10-04 21:31:55 UTC; greg
 Author: Greg Lin [aut, cre],
   Tanner Linsley [ctb, cph] (React Table library),
   Emotion team and other contributors [ctb, cph] (Emotion library)
 Maintainer: Greg Lin <glin@glin.io>
 Repository: CRAN
-Date/Publication: 2020-09-13 21:40:02 UTC
+Date/Publication: 2020-10-04 21:50:02 UTC

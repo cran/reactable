@@ -1,9 +1,9 @@
-d81b36dde4d533c9eec811dd258c4e73 *DESCRIPTION
+94e3e6643a9061eeef727949f27ddc1a *DESCRIPTION
 18c28e9f5fc1b48811f34969467049f2 *LICENSE
 d3673963249fe7b68b58a8d003692371 *NAMESPACE
-c62438cb83e6db093d1ce4b20a96294e *NEWS.md
+16c3c8a6e0ad1182e0b5a05b59fd1c0e *NEWS.md
 9f09cbd98deea93d06ebe728fd9bd81b *R/columns.R
-39a7e1cd7b23ed1cfad8a481008b936d *R/language.R
+ccffe000a349f655e5f8d5b9607f92f4 *R/language.R
 4d9222764959d0d45972f9e2763f43fe *R/reactable.R
 f6d2369310d53fd539a49cbc986042a6 *R/shiny.R
 a333e561dcb348e32b9569fd44d96bb7 *R/theme.R
@@ -23,7 +23,7 @@ ea998f8f1467e8dab8824946a2c0cb51 *man/figures/iris.png
 faebcf1fc26253af7d99c3d406290f9e *man/reactable-package.Rd
 c704fb820cafc6ae5b990afbf4083776 *man/reactable-shiny.Rd
 d04dcbc4200b2eee411d6f8957199624 *man/reactable.Rd
-79cc8190fa3c61f38828f243eed4143e *man/reactableLang.Rd
+ad86145e4bcf01628eef73c9e6f08310 *man/reactableLang.Rd
 890b4caf608551b47e7822f45a1a85dc *man/reactableTheme.Rd
 6473d29c317aab8ef52efc250ab96433 *man/reactable_html.Rd
 4e3f55c75c8921ccc5072885fb03b140 *man/reexports.Rd
