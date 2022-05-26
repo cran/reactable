@@ -53,8 +53,8 @@ Multiple locales may be specified to provide a fallback language in case
 a locale is unsupported. When multiple locales are specified, the first
 supported locale will be used.
 
-See \href{https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a}{here}
-for a list of common BCP 47 language tags.}
+See a list of \href{https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a}{common BCP 47 language tags}
+for reference.}
 }
 \value{
 A column format object that can be used to customize data formatting
@@ -134,18 +134,22 @@ data <- data.frame(
   Area = state.area
 )
 
-reactable(data, groupBy = "Region", columns = list(
-  States = colDef(
-    aggregate = "count",
-    format = list(
-      aggregated = colFormat(suffix = " states")
+reactable(
+  data,
+  groupBy = "Region",
+  columns = list(
+    States = colDef(
+      aggregate = "count",
+      format = list(
+        aggregated = colFormat(suffix = " states")
+      )
+    ),
+    Area = colDef(
+      aggregate = "sum",
+      format = colFormat(suffix = " mi\u00b2", separators = TRUE)
     )
-  ),
-  Area = colDef(
-    aggregate = "sum",
-    format = colFormat(suffix = " mi\u00b2", separators = TRUE)
   )
-))
+)
 
 }
 \seealso{

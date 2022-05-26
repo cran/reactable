@@ -43,18 +43,19 @@
 #'   the `"jump"` pagination type.
 #' @param pageSizeOptionsLabel Accessible label for the page size options input.
 #'
-#' @param defaultGroupHeader Header for default column groups. Only used for
-#'   `groupBy` columns.
+#' @param groupExpandLabel Accessible label for the row group expand button.
 #'
 #' @param detailsExpandLabel Accessible label for the row details expand button.
-#' @param detailsCollapseLabel Accessible label for the row details collapse button.
 #'
 #' @param selectAllRowsLabel Accessible label for the select all rows checkbox.
-#' @param deselectAllRowsLabel Accessible label for the deselect all rows checkbox.
 #' @param selectAllSubRowsLabel Accessible label for the select all sub rows checkbox.
-#' @param deselectAllSubRowsLabel Accessible label for the deselect all sub rows checkbox.
-#' @param selectRowLabel Accessible label for the select row checkbox
-#' @param deselectRowLabel Accessible label for the deselect row checkbox.
+#' @param selectRowLabel Accessible label for the select row checkbox.
+#'
+#' @param defaultGroupHeader Deprecated and no longer used.
+#' @param detailsCollapseLabel Deprecated and no longer used.
+#' @param deselectAllRowsLabel Deprecated and no longer used.
+#' @param deselectAllSubRowsLabel Deprecated and no longer used.
+#' @param deselectRowLabel Deprecated and no longer used.
 #'
 #' @return A language options object that can be used to customize the language
 #'   strings in `reactable()`.
@@ -76,15 +77,16 @@
 #'   pageNumberLabel = "Page {page}",
 #'   pageJumpLabel = "Go to page",
 #'   pageSizeOptionsLabel = "Rows per page",
-#'   defaultGroupHeader = "Grouped",
-#'   detailsExpandLabel = "Expand details",
-#'   detailsCollapseLabel = "Collapse details",
+#'   groupExpandLabel = "Toggle group",
+#'   detailsExpandLabel = "Toggle details",
 #'   selectAllRowsLabel = "Select all rows",
-#'   deselectAllRowsLabel = "Deselect all rows",
 #'   selectAllSubRowsLabel = "Select all rows in group",
-#'   deselectAllSubRowsLabel = "Deselect all rows in group",
 #'   selectRowLabel = "Select row",
-#'   deselectRowLabel = "Deselect row"
+#'   defaultGroupHeader = NULL,
+#'   detailsCollapseLabel = NULL,
+#'   deselectAllRowsLabel = NULL,
+#'   deselectAllSubRowsLabel = NULL,
+#'   deselectRowLabel = NULL
 #' )
 #'
 #' @examples
@@ -142,21 +144,52 @@ reactableLang <- function(
   pageJumpLabel = "Go to page",
   pageSizeOptionsLabel = "Rows per page",
 
-  # Column groups
-  defaultGroupHeader = "Grouped",
+  # Row grouping
+  groupExpandLabel = "Toggle group",
 
   # Row details
-  detailsExpandLabel = "Expand details",
-  detailsCollapseLabel = "Collapse details",
+  detailsExpandLabel = "Toggle details",
 
   # Selection
   selectAllRowsLabel = "Select all rows",
-  deselectAllRowsLabel = "Deselect all rows",
   selectAllSubRowsLabel = "Select all rows in group",
-  deselectAllSubRowsLabel = "Deselect all rows in group",
   selectRowLabel = "Select row",
-  deselectRowLabel = "Deselect row"
+
+  # Deprecated and no longer used (in v0.3.0)
+  defaultGroupHeader = NULL,
+  detailsCollapseLabel = NULL,
+  deselectAllRowsLabel = NULL,
+  deselectAllSubRowsLabel = NULL,
+  deselectRowLabel = NULL
 ) {
+
+  if (!is.null(defaultGroupHeader)) {
+    warning(
+      "`defaultGroupHeader` is deprecated and no longer used. ",
+      "Use the `columnGroups` argument in `reactable()` to customize the column ",
+      "group header for `groupBy` columns."
+    )
+  }
+  if (!is.null(detailsCollapseLabel)) {
+    warning("`detailsCollapseLabel` is deprecated and no longer used. ",
+            "Use the `detailsExpandLabel` argument to customize the accessible label ",
+            "for the row details expand button.")
+  }
+  if (!is.null(deselectAllRowsLabel)) {
+    warning("`deselectAllRowsLabel` is deprecated and no longer used. ",
+            "Use the `selectAllRowsLabel` argument to customize the accessible label ",
+            "for the select all rows checkbox.")
+  }
+  if (!is.null(deselectAllSubRowsLabel)) {
+    warning("`deselectAllSubRowsLabel` is deprecated and no longer used. ",
+            "Use the `selectAllSubRowsLabel` argument to customize the accessible label ",
+            "for the select all sub rows checkbox.")
+  }
+  if (!is.null(deselectRowLabel)) {
+    warning("`deselectRowLabel` is deprecated and no longer used. ",
+            "Use the `selectRowLabel` argument to customize the accessible label ",
+            "for the select row checkbox.")
+  }
 
   defaultArgs <- formals()
   args <- as.list(match.call())

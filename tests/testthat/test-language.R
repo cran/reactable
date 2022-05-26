@@ -1,5 +1,3 @@
-context("language")
-
 test_that("reactableLang", {
   expect_equal(reactableLang(), structure(list(), class = "reactableLang"))
   expect_equal(reactableLang(sortLabel = "_Sort {name}", searchPlaceholder = "", noData = NULL),
@@ -32,20 +30,16 @@ test_that("reactableLang", {
     pageJumpLabel = "_Go to page",
     pageSizeOptionsLabel = "_Rows per page",
 
-    # Column groups
-    defaultGroupHeader = "_Grouped",
+    # Row grouping
+    groupExpandLabel = "_Toggle group",
 
     # Row details
-    detailsExpandLabel = "_Expand details",
-    detailsCollapseLabel = "_Collapse details",
+    detailsExpandLabel = "_Toggle details",
 
     # Selection
     selectAllRowsLabel = "_Select all rows",
-    deselectAllRowsLabel = "_Deselect all rows",
     selectAllSubRowsLabel = "_Select all rows in group",
-    deselectAllSubRowsLabel = "_Deselect all rows in group",
-    selectRowLabel = "_Select row {row}",
-    deselectRowLabel = "_Deselect row {row}"
+    selectRowLabel = "_Select row {row}"
   )
   expect_equal(do.call(reactableLang, lang), structure(lang, class = "reactableLang"))
 
@@ -57,6 +51,16 @@ test_that("reactableLang", {
   # Errors
   expect_error(reactableLang(noData = 123, detailsExpandLabel = TRUE), "`noData` must be a character string")
   expect_error(reactableLang(selectRowLabel = list()), "`selectRowLabel` must be a character string")
+
+  # Deprecations
+  deprecatedArgs <- c("defaultGroupHeader", "detailsCollapseLabel", "deselectAllRowsLabel",
+                      "deselectAllSubRowsLabel", "deselectRowLabel")
+  for (arg in deprecatedArgs) {
+    expect_warning(
+      do.call(reactableLang, setNames(list("label"), arg)),
+      sprintf("`%s` is deprecated and no longer used", arg)
+    )
+  }
 })
 
 test_that("is.reactableLang", {

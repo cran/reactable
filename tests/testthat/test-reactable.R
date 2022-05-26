@@ -1,10 +1,16 @@
-context("reactable")
-
 library(htmltools)
 
-getAttribs <- function(widget) widget$x$tag$attribs
+getAttribs <- function(widget) {
+  widget$x$tag$attribs
+}
+
+getAttrib <- function(widget, name) {
+  widget$x$tag$attribs[[name]]
+}
 
 test_that("reactable handles invalid args", {
+  # NOTE: New arguments should be tested in their own separate test
+
   expect_error(reactable(1))
   df <- data.frame(x = 1)
   expect_error(reactable(df, columns = "x"))
@@ -20,8 +26,6 @@ test_that("reactable handles invalid args", {
   expect_error(reactable(df, groupBy = "x", columns = list(x = colDef(details = function(i) i))))
   expect_error(reactable(df, sortable = "true"))
   expect_error(reactable(df, resizable = "true"))
-  expect_error(reactable(df, filterable = "true"))
-  expect_error(reactable(df, searchable = "true"))
   expect_error(reactable(df, defaultColDef = list()))
   expect_error(reactable(df, defaultColGroup = list()))
   expect_error(reactable(df, defaultSortOrder = "ascending"))
@@ -29,15 +33,8 @@ test_that("reactable handles invalid args", {
   expect_error(reactable(df, defaultSorted = list("x")))
   expect_error(reactable(df, defaultSorted = list(x = "ascending")))
   expect_error(reactable(df, defaultSorted = list(y = "asc")))
-  expect_error(reactable(df, pagination = "yes"))
-  expect_error(reactable(df, defaultPageSize = "100"))
-  expect_error(reactable(df, showPageSizeOptions = "true"))
-  expect_error(reactable(df, pageSizeOptions = c("a", "100")))
-  expect_error(reactable(df, paginationType = "x"))
-  expect_error(reactable(df, showPagination = "true"))
   expect_error(reactable(df, showPageInfo = "true"))
   expect_error(reactable(df, minRows = "2"))
-  expect_error(reactable(df, details = "details"))
   expect_error(reactable(df, defaultExpanded = NULL))
   expect_error(reactable(df, defaultExpanded = 1:3))
   expect_error(reactable(df, selection = "none"))
@@ -63,6 +60,8 @@ test_that("reactable handles invalid args", {
 })
 
 test_that("reactable", {
+  # NOTE: New arguments should be tested in their own separate test
+
   # Default args
   tbl <- reactable(data.frame(x = 1, y = "b", stringsAsFactors = TRUE))
   attribs <- getAttribs(tbl)
@@ -79,38 +78,31 @@ test_that("reactable", {
     paginationType = "numbers",
     showPageInfo = TRUE,
     minRows = 1,
-    dataKey = digest::digest(list(data, columns)),
-    key = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns))
   )
   expect_equal(attribs, expected)
   expect_equal(tbl$width, "auto")
   expect_equal(tbl$height, "auto")
-  expect_null(tbl$elementId)
 
   # Table options
   tbl <- reactable(data.frame(x = "a", stringsAsFactors = TRUE), rownames = TRUE,
                    columnGroups = list(colGroup("group", "x")),
-                   sortable = FALSE, resizable = TRUE, filterable = TRUE, searchable = TRUE,
+                   sortable = FALSE, resizable = TRUE,
                    defaultSortOrder = "desc", defaultSorted = list(x = "asc"),
-                   defaultPageSize = 1, showPageSizeOptions = TRUE, pageSizeOptions = c(1, 2),
-                   paginationType = "simple", showPagination = FALSE, showPageInfo = FALSE,
-                   minRows = 5, details = function(i) i, defaultExpanded = TRUE,
+                   showPageInfo = FALSE, minRows = 5, defaultExpanded = TRUE,
                    selection = "single", selectionId = "sel", highlight = TRUE,
                    outlined = TRUE, bordered = TRUE, borderless = TRUE, striped = TRUE,
                    compact = TRUE, wrap = FALSE, showSortIcon = FALSE,
                    showSortable = TRUE, class = "tbl", style = list(color = "red"),
-                   fullWidth = FALSE, groupBy = "x", width = "400px", height = "100%",
-                   elementId = "tbl")
+                   fullWidth = FALSE, groupBy = "x", width = "400px", height = "100%")
   attribs <- getAttribs(tbl)
   data <- data.frame(.rownames = 1, x = "a")
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE)
   columns <- list(
-    list(accessor = ".selection", name = "", type = "NULL"),
-    list(accessor = ".details", name = "", type = "NULL", sortable = FALSE,
-         resizable = FALSE, filterable = FALSE,  width = 45, align = "center",
-         details = list("1")),
+    list(accessor = ".selection", name = "", type = "NULL", resizable = FALSE,
+         width = 45, selectable = TRUE),
     list(accessor = ".rownames", name = "", type = "numeric",
-         sortable = FALSE, filterable = FALSE),
+         sortable = FALSE, filterable = FALSE, rowHeader = TRUE),
     list(accessor = "x", name = "x", type = "factor")
   )
   expected <- list(
@@ -120,15 +112,10 @@ test_that("reactable", {
     pivotBy = list("x"),
     sortable = FALSE,
     resizable = TRUE,
-    filterable = TRUE,
-    searchable = TRUE,
     defaultSortDesc = TRUE,
     defaultSorted = list(list(id = "x", desc = FALSE)),
-    defaultPageSize = 1,
-    showPageSizeOptions = TRUE,
-    pageSizeOptions = c(1, 2),
-    paginationType = "simple",
-    showPagination = FALSE,
+    defaultPageSize = 10,
+    paginationType = "numbers",
     showPageInfo = FALSE,
     minRows = 5,
     defaultExpanded = TRUE,
@@ -148,13 +135,12 @@ test_that("reactable", {
     inline = TRUE,
     width = "400px",
     height = "100%",
-    dataKey = digest::digest(list(data, columns)),
-    key = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns))
   )
   expect_equal(attribs, expected)
   expect_equal(tbl$width, "400px")
   expect_equal(tbl$height, "100%")
-  expect_equal(tbl$elementId, "tbl")
+  expect_equal(tbl$sizingPolicy$knitr$figure, FALSE)
 
   # Column overrides
   tbl <- reactable(data.frame(x = 1, y = "2"), columns = list(
@@ -203,10 +189,45 @@ test_that("numbers are serialized with max precision", {
 })
 
 test_that("dates/datetimes are serialized in ISO 8601", {
-  data <- data.frame(x = as.POSIXct("2019-05-06 3:22:15"), y = as.Date("2010-12-30"))
+  data <- data.frame(x = as.POSIXct("2019-05-06 3:22:15", tz = "UTC"), y = as.Date("2010-12-30"))
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
-  expect_equal(as.character(attribs$data), '{"x":["2019-05-06T03:22:15"],"y":["2010-12-30"]}')
+  expect_equal(as.character(attribs$data), '{"x":["2019-05-06T03:22:15Z"],"y":["2010-12-30"]}')
+})
+
+test_that("data with custom classes not supported by jsonlite are serialized", {
+  data <- data.frame(
+    difftime = as.Date("2021-06-11") - as.Date("2021-03-05"),
+    custom = I(structure("custom", class = "unsupported_custom_class"))
+  )
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  serialized <- jsonlite::fromJSON(attribs$data)
+  expect_equal(serialized$custom, "custom")
+  # jsonlite may support difftime objects at some point, so don't throw an error
+  if (serialized$difftime != 98) {
+    warning(paste("Unexpected result from serializing difftime:", serialized$difftime))
+  }
+})
+
+test_that("list-columns are serialized correctly", {
+  data <- data.frame(
+    x = I(list(
+      # Length-1 vectors should be unboxed, except when wrapped in I()
+      "x",
+      I("x"),
+      list("x"),
+      list(1, 2, 3),
+      c("a", "b"),
+      list(x = TRUE),
+      # Length-1 data frame columns should still be arrays
+      data.frame(x = "y"),
+      NA
+    ))
+  )
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"x":["x",["x"],["x"],[1,2,3],["a","b"],{"x":true},{"x":["y"]},null]}')
 })
 
 test_that("supports Crosstalk", {
@@ -233,7 +254,7 @@ test_that("supports Crosstalk", {
   data <- crosstalk::SharedData$new(data.frame(x = I(list(list(1,2,3), list(x = 1)))), key = ~x)
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
-  expect_equal(as.character(attribs$data), '{"x":[[[1],[2],[3]],{"x":[1]}]}')
+  expect_equal(as.character(attribs$data), '{"x":[[1,2,3],{"x":1}]}')
   expect_equal(attribs$crosstalkKey, I(list(list(1,2,3), list(x = 1))))
   expect_equal(attribs$crosstalkGroup, data$groupName())
 })
@@ -245,7 +266,7 @@ test_that("rownames", {
   expect_equal(as.character(attribs$data), '{".rownames":[1,2,3],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
     accessor = ".rownames", name = "",  type = "numeric",
-    sortable = FALSE, filterable = FALSE
+    sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
   # Character row names
@@ -254,7 +275,7 @@ test_that("rownames", {
   expect_equal(as.character(attribs$data), '{".rownames":["a","b","c"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
     accessor = ".rownames", name = "",  type = "character",
-    sortable = FALSE, filterable = FALSE
+    sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
   # Custom rownames colDef
@@ -264,7 +285,7 @@ test_that("rownames", {
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[1]], list(
     accessor = ".rownames", name = "N",  type = "numeric",
-    sortable = TRUE, filterable = FALSE, headerClassName = "hdr"
+    sortable = TRUE, filterable = FALSE, headerClassName = "hdr", rowHeader = TRUE
   ))
 
   # Row names can be part of column groups
@@ -284,7 +305,7 @@ test_that("rownames", {
   expect_equal(as.character(attribs$data), '{".rownames":["a","b","c"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
     accessor = ".rownames", name = "",  type = "character",
-    sortable = FALSE, filterable = FALSE
+    sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
   # Handles matrices
   tbl <- reactable(matrix(c(1,2,3), dimnames = list(c(1, 2, 3), "x")))
@@ -292,7 +313,7 @@ test_that("rownames", {
   expect_equal(as.character(attribs$data), '{".rownames":["1","2","3"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
     accessor = ".rownames", name = "",  type = "character",
-    sortable = FALSE, filterable = FALSE
+    sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
   # If no row names, should not be shown by default
@@ -302,24 +323,113 @@ test_that("rownames", {
   expect_equal(length(attribs$columns), 1)
 })
 
+test_that("filterable", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "filterable"), NULL)
+
+  tbl <- reactable(data, filterable = TRUE)
+  expect_equal(getAttrib(tbl, "filterable"), TRUE)
+
+  tbl <- reactable(data, filterable = FALSE)
+  expect_equal(getAttrib(tbl, "filterable"), NULL)
+
+  expect_error(reactable(data, filterable = "true"), "`filterable` must be TRUE or FALSE")
+})
+
+test_that("searchable", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "searchable"), NULL)
+
+  tbl <- reactable(data, searchable = TRUE)
+  expect_equal(getAttrib(tbl, "searchable"), TRUE)
+
+  tbl <- reactable(data, searchable = FALSE)
+  expect_equal(getAttrib(tbl, "searchable"), NULL)
+
+  expect_error(reactable(data, searchable = "true"), "`searchable` must be TRUE or FALSE")
+})
+
+test_that("searchMethod", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "searchMethod"), NULL)
+
+  tbl <- reactable(data, searchMethod = JS("(rows, columnIds, filterValue) => rows"))
+  expect_equal(getAttrib(tbl, "searchMethod"), JS("(rows, columnIds, filterValue) => rows"))
+
+  expect_error(reactable(data, searchMethod = "rows => rows"), "`searchMethod` must be a JS function")
+})
+
 test_that("defaultColDef", {
   # Defaults applied
-  tbl <- reactable(data.frame(x = 1, y = "2"),
-                   defaultColDef = colDef(width = 22),
-                   columns = list(y = colDef(class = "cls")))
+  tbl <- reactable(
+    data.frame(x = 1, y = "2"),
+    defaultColDef = colDef(
+      sortNALast = TRUE,
+      html = TRUE,
+      width = 22,
+      rowHeader = TRUE
+    ),
+    columns = list(y = colDef(
+      class = "cls"
+    ))
+  )
   attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[1]]$sortNALast, TRUE)
+  expect_equal(attribs$columns[[2]]$sortNALast, TRUE)
+  expect_equal(attribs$columns[[1]]$html, TRUE)
+  expect_equal(attribs$columns[[2]]$html, TRUE)
   expect_equal(attribs$columns[[1]]$width, 22)
   expect_equal(attribs$columns[[2]]$width, 22)
+  expect_equal(attribs$columns[[1]]$rowHeader, TRUE)
+  expect_equal(attribs$columns[[2]]$rowHeader, TRUE)
   expect_equal(attribs$columns[[2]]$class, "cls")
 
-  # Defaults can be overrided
-  tbl <- reactable(data.frame(x = 1, y = "2"),
-                   defaultColDef = colDef(width = 22, class = "default-cls"),
-                   columns = list(y = colDef(width = 44)))
+  # Defaults can be overridden
+  tbl <- reactable(
+    data.frame(x = 1, y = "2"),
+    defaultColDef = colDef(
+      show = FALSE,
+      sortNALast = TRUE,
+      html = TRUE,
+      na = "na",
+      width = 22,
+      class = "default-cls",
+      rowHeader = TRUE,
+      vAlign = "center"
+    ),
+    columns = list(y = colDef(
+      show = TRUE,
+      sortNALast = FALSE,
+      html = FALSE,
+      na = "",
+      width = 44,
+      rowHeader = FALSE,
+      vAlign = "top"
+    ))
+  )
   attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[1]]$show, FALSE)
+  expect_equal(attribs$columns[[2]]$show, TRUE)
+  expect_equal(attribs$columns[[1]]$sortNALast, TRUE)
+  expect_equal(attribs$columns[[2]]$sortNALast, FALSE)
+  expect_equal(attribs$columns[[1]]$html, TRUE)
+  expect_equal(attribs$columns[[2]]$html, FALSE)
+  expect_equal(attribs$columns[[1]]$na, "na")
+  expect_equal(attribs$columns[[2]]$na, "")
   expect_equal(attribs$columns[[1]]$width, 22)
   expect_equal(attribs$columns[[2]]$width, 44)
+  expect_equal(attribs$columns[[1]]$class, "default-cls")
   expect_equal(attribs$columns[[2]]$class, "default-cls")
+  expect_equal(attribs$columns[[1]]$rowHeader, TRUE)
+  expect_equal(attribs$columns[[2]]$rowHeader, FALSE)
+  expect_equal(attribs$columns[[1]]$vAlign, "center")
+  expect_equal(attribs$columns[[2]]$vAlign, "top")
 
   # Defaults should apply to row name column
   tbl <- reactable(data.frame(x = 1, y = "2"),
@@ -432,36 +542,109 @@ test_that("defaultSorted", {
 })
 
 test_that("pagination", {
-  # Enable pagination
-  tbl <- reactable(data.frame(x = rep(0, 10)), defaultPageSize = 1, pagination = TRUE)
-  attribs <- getAttribs(tbl)
-  expect_null(attribs$showPagination)
-  expect_equal(attribs$defaultPageSize, 1)
+  data <- data.frame(x = 1)
 
-  # Disable pagination
-  tbl <- reactable(data.frame(x = rep(0, 4)), pagination = FALSE)
-  attribs <- getAttribs(tbl)
-  expect_equal(attribs$defaultPageSize, 4)
-  expect_null(attribs$showPagination)
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "pagination"), NULL)
 
-  # Should override defaultPageSize when disabled
-  tbl <- reactable(data.frame(x = rep(0, 10)), pagination = FALSE,
-                   showPagination = TRUE, defaultPageSize = 25)
-  attribs <- getAttribs(tbl)
-  expect_equal(attribs$defaultPageSize, 10)
+  tbl <- reactable(data, pagination = TRUE)
+  expect_equal(getAttrib(tbl, "pagination"), NULL)
 
-  # Should still be able to show pagination when disabled
-  tbl <- reactable(data.frame(x = rep(0, 4)), pagination = FALSE, showPagination = TRUE)
-  attribs <- getAttribs(tbl)
-  expect_equal(attribs$defaultPageSize, 4)
-  expect_true(attribs$showPagination)
+  tbl <- reactable(data, pagination = FALSE)
+  expect_equal(getAttrib(tbl, "pagination"), FALSE)
 
-  # Pagination types
+  expect_error(reactable(data, pagination = "false"), "`pagination` must be TRUE or FALSE")
+})
+
+test_that("showPageSizeOptions and pageSizeOptions", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data.frame(x = 1))
+  expect_equal(getAttrib(tbl, "showPageSizeOptions"), NULL)
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), NULL)
+
+  # pageSizeOptions should be unset when page size options are hidden
+  tbl <- reactable(data.frame(x = 1), pageSizeOptions = 5)
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), NULL)
+
+  # pageSizeOptions should be serialized as an array
+  tbl <- reactable(data, showPageSizeOptions = TRUE, pageSizeOptions = c(1, 3))
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(1, 3))
+  tbl <- reactable(data, showPageSizeOptions = TRUE, pageSizeOptions = 5)
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(5))
+
+  expect_error(reactable(data, showPageSizeOptions = "true"), "`showPageSizeOptions` must be TRUE or FALSE")
+  expect_error(reactable(data, pageSizeOptions = "1"), "`pageSizeOptions` must be numeric")
+})
+
+test_that("paginationType", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "paginationType"), "numbers")
+
   for (type in c("numbers", "jump", "simple")) {
-    tbl <- reactable(data.frame(x = 1), paginationType = type)
-    attribs <- getAttribs(tbl)
-    expect_equal(attribs$paginationType, type)
+    tbl <- reactable(data, paginationType = type)
+    expect_equal(getAttrib(tbl, "paginationType"), type)
   }
+
+  expect_error(reactable(data, paginationType = "none"), '`paginationType` must be one of "numbers", "jump", "simple"')
+})
+
+test_that("defaultPageSize", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "defaultPageSize"), 10)
+
+  tbl <- reactable(data, defaultPageSize = 1)
+  expect_equal(getAttrib(tbl, "defaultPageSize"), 1)
+
+  expect_error(reactable(data, defaultPageSize = "10"), "`defaultPageSize` must be numeric")
+})
+
+test_that("showPagination", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "showPagination"), NULL)
+
+  tbl <- reactable(data, pagination = FALSE, showPagination = TRUE)
+  expect_equal(getAttrib(tbl, "showPagination"), TRUE)
+
+  tbl <- reactable(data, showPagination = FALSE)
+  expect_equal(getAttrib(tbl, "showPagination"), FALSE)
+
+  expect_error(reactable(data, showPagination = "false"), "`showPagination` must be TRUE or FALSE")
+})
+
+test_that("paginateSubRows", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "paginateSubRows"), NULL)
+
+  tbl <- reactable(data, paginateSubRows = TRUE)
+  expect_equal(getAttrib(tbl, "paginateSubRows"), TRUE)
+
+  tbl <- reactable(data, paginateSubRows = FALSE)
+  expect_equal(getAttrib(tbl, "paginateSubRows"), NULL)
+
+  expect_error(reactable(data, paginateSubRows = "true"), "`paginateSubRows` must be TRUE or FALSE")
+})
+
+test_that("sub rows", {
+  data <- data.frame(
+    x = c(1, 2),
+    .subRows = I(list(
+      data.frame(x = c(3, 4)),
+      NA
+    ))
+  )
+  tbl <- reactable(data)
+  columns <- getAttrib(tbl, "columns")
+  expect_equal(length(columns), 1)
+  expect_equal(columns[[1]]$accessor, "x")
 })
 
 test_that("column renderers", {
@@ -578,10 +761,21 @@ test_that("row details", {
   # R renderer
   tbl <- reactable(data, details = function(i) if (i == 1) data[i, "y"])
   attribs <- getAttribs(tbl)
-  expected <- list(accessor = ".details", name = "", type = "NULL", sortable = FALSE,
-                   resizable = FALSE, filterable = FALSE, width = 45, align = "center",
-                   details = list("a", NULL))
-  expect_equal(attribs$columns[[1]], expected)
+  expect_equal(
+    attribs$columns[[1]],
+    list(
+      accessor = ".details", name = "", type = "NULL", sortable = FALSE,
+      resizable = FALSE, filterable = FALSE, searchable = FALSE, width = 45,
+      align = "center", details = list("a", NULL)
+    )
+  )
+
+  tbl <- reactable(
+    data,
+    defaultColDef = colDef(details = function(i, name) paste(i, name))
+  )
+  attribs <- getAttribs(tbl)
+  expect_equal(attribs$columns[[1]]$details, list("1 x", "2 x"))
 
   # JS renderer
   tbl <- reactable(data, details = JS("rowInfo => rowInfo.y"))
@@ -625,6 +819,25 @@ test_that("row details", {
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columnGroups[[1]]$columns, list(".details", "x"))
+
+  expect_error(reactable(data, details = "details"), "`details` renderer must be an R function or JS function")
+})
+
+test_that("custom filter inputs", {
+  data <- data.frame(x = c(1, 2), y = c("a", "b"), z = c("c", "d"), stringsAsFactors = FALSE)
+
+  tbl <- reactable(data, columns = list(
+    x = colDef(filterInput = JS("(filterValue, setFilter, column) => filterInput")),
+    y = colDef(filterInput = function(values, name) {
+      htmltools::tags$input(type = "text", class = paste(c(values, name), collapse = "_"))
+    }),
+    z = colDef(filterInput = '<input type="text">', html = TRUE)
+  ))
+
+  columns <- getAttrib(tbl, "columns")
+  expect_equal(columns[[1]]$filterInput, JS("(filterValue, setFilter, column) => filterInput"))
+  expect_equal(columns[[2]]$filterInput, htmltools::tags$input(type = "text", className = "a_b_y"))
+  expect_equal(columns[[3]]$filterInput, '<input type="text">')
 })
 
 test_that("html dependencies from rendered content are passed through", {
@@ -693,6 +906,10 @@ test_that("row selection", {
   attribs <- getAttribs(tbl)
   expect_equal(attribs$selection, "single")
   expect_equal(attribs$selectionId, "selected")
+  expect_equal(attribs$columns[[1]], list(
+    accessor = ".selection", name = "", type = "NULL", resizable = FALSE,
+    width = 45, selectable = TRUE
+  ))
 
   tbl <- reactable(data, selection = "multiple", defaultSelected = c(1, 3, 2))
   attribs <- getAttribs(tbl)
@@ -706,12 +923,13 @@ test_that("row selection", {
 
   # Selection column should be customizable
   tbl <- reactable(data, selection = "single", columns = list(
-    .selection = colDef(width = 100, class = "my-cls")
+    .selection = colDef(width = 100, class = "my-cls", resizable = TRUE)
   ))
   attribs <- getAttribs(tbl)
-  expect_equal(attribs$columns[[1]]$name, "")
-  expect_equal(attribs$columns[[1]]$width, 100)
-  expect_equal(attribs$columns[[1]]$className, "my-cls")
+  expect_equal(attribs$columns[[1]], list(
+    accessor = ".selection", name = "", type = "NULL", resizable = TRUE,
+    width = 100, selectable = TRUE, className = "my-cls"
+  ))
 
   # Selection column can be part of column groups
   tbl <- reactable(data.frame(x = c(1, 2)), selection = "multiple", columnGroups = list(
@@ -923,6 +1141,18 @@ test_that("language", {
   # Errors
   expect_error(reactable(data, language = list()),
                "`language` must be a reactable language options object")
+})
+
+test_that("elementId", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(tbl$elementId, NULL)
+  expect_equal(getAttribs(tbl)$elementId, NULL)
+
+  tbl <- reactable(data, elementId = "my-tbl")
+  expect_equal(tbl$elementId, "my-tbl")
+  expect_equal(getAttribs(tbl)$elementId, "my-tbl")
 })
 
 test_that("columnSortDefs", {

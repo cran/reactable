@@ -73,9 +73,11 @@ isTagList <- function(x) {
 asReactTag <- function(x) {
   if (is.htmlwidget(x)) {
     if (inherits(x, "reactable")) {
-      # Extract tag for subtables / nested tables
+      # Extract tag for nested tables
       x$x$tag <- htmltools::tagAppendAttributes(x$x$tag, nested = TRUE)
-      return(asReactTag(x$x$tag))
+      tag <- asReactTag(x$x$tag)
+      tag <- htmltools::attachDependencies(tag, x$dependencies)
+      return(tag)
     } else {
       tags <- htmltools::as.tags(x)
       tags <- asReactTag(tags)
@@ -123,7 +125,7 @@ asReactTag <- function(x) {
   # Filter null elements for proper hydration
   x$children <- filterNulls(x$children)
   x$children <- lapply(x$children, asReactTag)
-  x$attribs <- asReactAttributes(x$attribs)
+  x$attribs <- asReactAttributes(x$attribs, x$name)
   x
 }
 
@@ -164,13 +166,15 @@ unnestTagList <- function(x) {
   htmltools::attachDependencies(tags, htmlDeps)
 }
 
-asReactAttributes <- function(attribs) {
-  reactAttribs <- list(
+# Transform HTML attributes to React DOM attributes.
+# Not all attributes are supported at the moment - notable exceptions are
+# some event handler attributes and `selected` attributes for <option> elements.
+asReactAttributes <- function(attribs, tagName) {
+  htmlAttribs <- list(
     autofocus = "autoFocus",
     autocomplete = "autoComplete",
     autoplay = "autoPlay",
     charset = "charSet",
-    checked = "defaultChecked",
     class = "className",
     colspan = "colSpan",
     crossorigin = "crossOrigin",
@@ -196,20 +200,85 @@ asReactAttributes <- function(attribs) {
     srcdoc = "srcDoc",
     srclang = "srcLang",
     tabindex = "tabIndex",
-    usemap = "useMap",
-    value = "defaultValue"
+    usemap = "useMap"
+  )
+
+  eventAttribs <- list(
+    onblur = "onBlur",
+    onchange = "onChange",
+    onclick = "onClick",
+    ondblclick = "onDoubleClick",
+    onfocus = "onFocus",
+    ongotpointercapture = "onGotPointerCapture",
+    onlostpointercapture = "onLostPointerCapture",
+    oninput = "onInput",
+    onkeydown = "onKeyDown",
+    onkeypress = "onKeyPress",
+    onkeyup = "onKeyUp",
+    onload = "onLoad",
+    onmousedown = "onMouseDown",
+    onmouseenter = "onMouseEnter",
+    onmouseleave = "onMouseLeave",
+    onmousemove = "onMouseMove",
+    onmouseout = "onMouseOut",
+    onmouseover = "onMouseOver",
+    onmouseup = "onMouseUp",
+    onpointercancel = "onPointerCancel",
+    onpointerdown = "onPointerDown",
+    onpointerenter = "onPointerEnter",
+    onpointerleave = "onPointerLeave",
+    onpointermove = "onPointerMove",
+    onpointerout = "onPointerOut",
+    onpointerover = "onPointerOver",
+    onpointerup = "onPointerUp",
+    onresize = "onResize",
+    onselect = "onSelect",
+    ontouchcancel = "onTouchCancel",
+    ontouchend = "onTouchEnd",
+    ontouchmove = "onTouchMove",
+    ontouchstart = "onTouchStart"
   )
 
   for (name in names(attribs)) {
-    if (!is.null(reactAttribs[[name]])) {
-      attribs[[reactAttribs[[name]]]] <- attribs[[name]]
+    # Map HTML attributes to React attributes. Not required as React still accepts
+    # the standard attribute names.
+    if (!is.null(htmlAttribs[[name]])) {
+      attribs[[htmlAttribs[[name]]]] <- attribs[[name]]
+      attribs[[name]] <- NULL
+    }
+
+    # Transform inline event attributes, ensuring `this` and `event` are in scope.
+    if (!is.null(eventAttribs[[name]])) {
+      attribs[[eventAttribs[[name]]]] <- JS(sprintf(
+        "function(_e){(function(event){%s}).apply(event.target,[_e])}",
+        attribs[[name]]
+      ))
       attribs[[name]] <- NULL
     }
   }
 
-  style <- attribs$style
+  # Transform form element attributes to their uncontrolled equivalents, since
+  # controlled attributes don't make sense outside of React.
+  if (tagName %in% c("input", "select", "textarea")) {
+    value <- attribs[["value"]]
+    if (!is.null(value)) {
+      attribs[["defaultValue"]] <- value
+      attribs[["value"]] <- NULL
+    }
+  }
+
+  if (tagName == "input") {
+    checked <- attribs[["checked"]]
+    if (!is.null(checked)) {
+      checked <- if (is.na(checked)) TRUE else checked
+      attribs[["defaultChecked"]] <- checked
+      attribs[["checked"]] <- NULL
+    }
+  }
+
+  style <- attribs[["style"]]
   if (!is.null(style) && is.character(style)) {
-    attribs$style <- asReactStyle(style)
+    attribs[["style"]] <- asReactStyle(style)
   }
 
   attribs

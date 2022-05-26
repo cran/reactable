@@ -10,21 +10,29 @@ colDef(
   sortable = NULL,
   resizable = NULL,
   filterable = NULL,
+  searchable = NULL,
+  filterMethod = NULL,
   show = TRUE,
   defaultSortOrder = NULL,
   sortNALast = FALSE,
   format = NULL,
   cell = NULL,
+  grouped = NULL,
   aggregated = NULL,
   header = NULL,
   footer = NULL,
   details = NULL,
+  filterInput = NULL,
   html = FALSE,
   na = "",
-  minWidth = NULL,
+  rowHeader = FALSE,
+  minWidth = 100,
   maxWidth = NULL,
   width = NULL,
   align = NULL,
+  vAlign = NULL,
+  headerVAlign = NULL,
+  sticky = NULL,
   class = NULL,
   style = NULL,
   headerClass = NULL,
@@ -49,7 +57,21 @@ To enable row grouping, use the \code{groupBy} argument in \code{\link[=reactabl
 
 \item{filterable}{Enable column filtering? Overrides the table option.}
 
-\item{show}{Show the column? Defaults to \code{TRUE}.}
+\item{searchable}{Enable or disable global table searching for this column.
+By default, global searching applies to all visible columns. Set this to
+\code{FALSE} to exclude a visible column from searching, or \code{TRUE} to include a
+hidden column in searching.}
+
+\item{filterMethod}{Custom filter method to use for column filtering.
+A \code{\link[=JS]{JS()}} function that takes an array of row objects, the column ID,
+and the filter value as arguments, and returns the filtered array of
+row objects.}
+
+\item{show}{Show the column?
+
+If \code{FALSE}, this column will be excluded from global table searching by
+default. To include this hidden column in searching, set \code{searchable}
+to \code{TRUE} in \code{\link[=colDef]{colDef()}}.}
 
 \item{defaultSortOrder}{Default sort order. Either \code{"asc"} for ascending
 order or \code{"desc"} for descending order. Overrides the table option.}
@@ -62,27 +84,45 @@ cells (\code{"cell"}) and aggregated cells (\code{"aggregated"}) separately.}
 
 \item{cell}{Custom cell renderer. An R function that takes the cell value,
 row index, and column name as arguments, or a \code{\link[=JS]{JS()}} function that takes a
-cell info object as an argument.}
+cell info object and table state object as arguments.}
+
+\item{grouped}{Custom grouped cell renderer. A \code{\link[=JS]{JS()}} function that takes a
+cell info object and table state object as arguments.}
 
 \item{aggregated}{Custom aggregated cell renderer. A \code{\link[=JS]{JS()}} function that takes
-a cell info object as an argument.}
+a cell info object and table state object as arguments.}
 
 \item{header}{Custom header renderer. An R function that takes the header value
-and column name as arguments, or a \code{\link[=JS]{JS()}} function that takes a column info
-object as an argument.}
+and column name as arguments, or a \code{\link[=JS]{JS()}} function that takes a column
+object and table state object as arguments.}
 
 \item{footer}{Footer content or render function. Render functions can be an
-R function that takes two arguments, the column values and column name, or a
-\code{\link[=JS]{JS()}} function that takes a column info object as an argument.}
+R function that takes the column values and column name as arguments, or a
+\code{\link[=JS]{JS()}} function that takes a column object and table state object as
+arguments.}
 
 \item{details}{Additional content to display when expanding a row. An R function
-that takes a row index argument or a \code{\link[=JS]{JS()}} function that takes a row info object
-as an argument. Cannot be used on a grouping column.}
+that takes the row index and column name as arguments, or a \code{\link[=JS]{JS()}} function
+that takes a row info object and table state object as arguments.
+Cannot be used on a \code{groupBy} column.}
+
+\item{filterInput}{Custom filter input or render function. Render functions can
+be an R function that takes the column values and column name as arguments,
+or a \code{\link[=JS]{JS()}} function that takes a column object and table state object as
+arguments.}
 
 \item{html}{Render content as HTML? Raw HTML strings are escaped by default.}
 
 \item{na}{String to display for missing values (i.e. \link{NA} or \link{NaN}).
 By default, missing values are displayed as blank cells.}
+
+\item{rowHeader}{Mark up cells in this column as row headers?
+
+Set this to \code{TRUE} to help users navigate the table using assistive technologies.
+When cells are marked up as row headers, assistive technologies will read them
+aloud while navigating through cells in the table.
+
+Cells in the row names column are automatically marked up as row headers.}
 
 \item{minWidth}{Minimum width of the column in pixels. Defaults to 100.}
 
@@ -90,18 +130,32 @@ By default, missing values are displayed as blank cells.}
 
 \item{width}{Fixed width of the column in pixels. Overrides \code{minWidth} and \code{maxWidth}.}
 
-\item{align}{Column alignment. One of \code{"left"}, \code{"right"}, \code{"center"}.}
+\item{align}{Horizontal alignment of content in the column. One of
+\code{"left"}, \code{"right"}, \code{"center"}. By default, all numbers are right-aligned,
+while all other content is left-aligned.}
+
+\item{vAlign}{Vertical alignment of content in data cells. One of \code{"top"}
+(the default), \code{"center"}, \code{"bottom"}.}
+
+\item{headerVAlign}{Vertical alignment of content in header cells. One of
+\code{"top"} (the default), \code{"center"}, \code{"bottom"}.}
+
+\item{sticky}{Make the column sticky when scrolling horizontally? Either
+\code{"left"} or \code{"right"} to make the column stick to the left or right side.
+
+If a sticky column is in a column group, all columns in the group will
+automatically be made sticky, including the column group header.}
 
 \item{class}{Additional CSS classes to apply to cells. Can also be an R function
 that takes the cell value, row index, and column name as arguments, or a \code{\link[=JS]{JS()}}
-function that takes a row info object, column info object, and table state
-object as arguments.
+function that takes a row info object, column object, and table state object
+as arguments.
 
 Note that R functions cannot apply classes to aggregated cells.}
 
 \item{style}{Inline styles to apply to cells. A named list or character string.
 Can also be an R function that takes the cell value and row index as arguments,
-or a \code{\link[=JS]{JS()}} function that takes a row info object, column info object, and
+or a \code{\link[=JS]{JS()}} function that takes a row info object, column object, and
 table state object as arguments.
 
 Note that R functions cannot apply styles to aggregated cells.

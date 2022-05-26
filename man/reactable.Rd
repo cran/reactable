@@ -14,6 +14,7 @@ reactable(
   resizable = FALSE,
   filterable = FALSE,
   searchable = FALSE,
+  searchMethod = NULL,
   defaultColDef = NULL,
   defaultColGroup = NULL,
   defaultSortOrder = "asc",
@@ -26,6 +27,7 @@ reactable(
   showPagination = NULL,
   showPageInfo = TRUE,
   minRows = 1,
+  paginateSubRows = FALSE,
   details = NULL,
   defaultExpanded = FALSE,
   selection = NULL,
@@ -64,7 +66,10 @@ Can also be a \code{\link[crosstalk:SharedData]{crosstalk::SharedData}} object t
 
 \item{rownames}{Show row names? Defaults to \code{TRUE} if the data has row names.
 
-To customize the row names column, use \code{".rownames"} as the column name.}
+To customize the row names column, use \code{".rownames"} as the column name.
+
+Cells in the row names column are automatically marked up as row headers
+for assistive technologies.}
 
 \item{groupBy}{Character vector of column names to group by.
 
@@ -77,6 +82,11 @@ To aggregate data when rows are grouped, use the \code{aggregate} argument in \c
 \item{filterable}{Enable column filtering?}
 
 \item{searchable}{Enable global table searching?}
+
+\item{searchMethod}{Custom search method to use for global table searching.
+A \code{\link[=JS]{JS()}} function that takes an array of row objects, an array of
+column IDs, and the search value as arguments, and returns the filtered
+array of row objects.}
 
 \item{defaultColDef}{Default column definition used by every column. See \code{\link[=colDef]{colDef()}}.}
 
@@ -108,10 +118,12 @@ than one page.}
 
 \item{minRows}{Minimum number of rows to show per page. Defaults to 1.}
 
+\item{paginateSubRows}{When rows are grouped, paginate sub rows? Defaults to \code{FALSE}.}
+
 \item{details}{Additional content to display when expanding a row. An R function
-that takes a row index argument or a \code{\link[=JS]{JS()}} function that takes
-a row info object as an argument. Can also be a \code{\link[=colDef]{colDef()}} to customize the
-details expander column.}
+that takes the row index and column name as arguments, or a \code{\link[=JS]{JS()}} function
+that takes a row info object as an argument. Can also be a \code{\link[=colDef]{colDef()}} to
+customize the details expander column.}
 
 \item{defaultExpanded}{Expand all rows by default?}
 
@@ -131,7 +143,7 @@ Use \code{\link[=getReactableState]{getReactableState()}} to get the selected ro
 
 \item{onClick}{Action to take when clicking a cell. Either \code{"expand"} to expand
 the row, \code{"select"} to select the row, or a \code{\link[=JS]{JS()}} function that takes a
-row info object, column info object, and table state object as arguments.}
+row info object, column object, and table state object as arguments.}
 
 \item{highlight}{Highlight table rows on hover?}
 
@@ -207,12 +219,16 @@ additional details and examples.
 reactable(iris)
 
 # Grouping and aggregation
-reactable(iris, groupBy = "Species", columns = list(
-  Sepal.Length = colDef(aggregate = "count"),
-  Sepal.Width = colDef(aggregate = "mean"),
-  Petal.Length = colDef(aggregate = "sum"),
-  Petal.Width = colDef(aggregate = "max")
-))
+reactable(
+  iris,
+  groupBy = "Species",
+  columns = list(
+    Sepal.Length = colDef(aggregate = "count"),
+    Sepal.Width = colDef(aggregate = "mean"),
+    Petal.Length = colDef(aggregate = "sum"),
+    Petal.Width = colDef(aggregate = "max")
+  )
+)
 
 # Row details
 reactable(iris, details = function(index) {

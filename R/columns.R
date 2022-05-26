@@ -12,7 +12,19 @@
 #' @param sortable Enable sorting? Overrides the table option.
 #' @param resizable Enable column resizing? Overrides the table option.
 #' @param filterable Enable column filtering? Overrides the table option.
-#' @param show Show the column? Defaults to `TRUE`.
+#' @param searchable Enable or disable global table searching for this column.
+#'   By default, global searching applies to all visible columns. Set this to
+#'   `FALSE` to exclude a visible column from searching, or `TRUE` to include a
+#'   hidden column in searching.
+#' @param filterMethod Custom filter method to use for column filtering.
+#'   A [JS()] function that takes an array of row objects, the column ID,
+#'   and the filter value as arguments, and returns the filtered array of
+#'   row objects.
+#' @param show Show the column?
+#'
+#'   If `FALSE`, this column will be excluded from global table searching by
+#'   default. To include this hidden column in searching, set `searchable`
+#'   to `TRUE` in [colDef()].
 #' @param defaultSortOrder Default sort order. Either `"asc"` for ascending
 #'   order or `"desc"` for descending order. Overrides the table option.
 #' @param sortNALast Always sort missing values ([NA] or [NaN]) last?
@@ -21,34 +33,60 @@
 #'   cells (`"cell"`) and aggregated cells (`"aggregated"`) separately.
 #' @param cell Custom cell renderer. An R function that takes the cell value,
 #'   row index, and column name as arguments, or a [JS()] function that takes a
-#'   cell info object as an argument.
+#'   cell info object and table state object as arguments.
+#' @param grouped Custom grouped cell renderer. A [JS()] function that takes a
+#'   cell info object and table state object as arguments.
 #' @param aggregated Custom aggregated cell renderer. A [JS()] function that takes
-#'   a cell info object as an argument.
+#'   a cell info object and table state object as arguments.
 #' @param header Custom header renderer. An R function that takes the header value
-#'   and column name as arguments, or a [JS()] function that takes a column info
-#'   object as an argument.
+#'   and column name as arguments, or a [JS()] function that takes a column
+#'   object and table state object as arguments.
 #' @param footer Footer content or render function. Render functions can be an
-#'   R function that takes two arguments, the column values and column name, or a
-#'   [JS()] function that takes a column info object as an argument.
+#'   R function that takes the column values and column name as arguments, or a
+#'   [JS()] function that takes a column object and table state object as
+#'   arguments.
 #' @param details Additional content to display when expanding a row. An R function
-#'   that takes a row index argument or a [JS()] function that takes a row info object
-#'   as an argument. Cannot be used on a grouping column.
+#'   that takes the row index and column name as arguments, or a [JS()] function
+#'   that takes a row info object and table state object as arguments.
+#'   Cannot be used on a `groupBy` column.
+#' @param filterInput Custom filter input or render function. Render functions can
+#'   be an R function that takes the column values and column name as arguments,
+#'   or a [JS()] function that takes a column object and table state object as
+#'   arguments.
 #' @param html Render content as HTML? Raw HTML strings are escaped by default.
 #' @param na String to display for missing values (i.e. [NA] or [NaN]).
 #'   By default, missing values are displayed as blank cells.
+#' @param rowHeader Mark up cells in this column as row headers?
+#'
+#'  Set this to `TRUE` to help users navigate the table using assistive technologies.
+#'  When cells are marked up as row headers, assistive technologies will read them
+#'  aloud while navigating through cells in the table.
+#'
+#'  Cells in the row names column are automatically marked up as row headers.
 #' @param minWidth Minimum width of the column in pixels. Defaults to 100.
 #' @param maxWidth Maximum width of the column in pixels.
 #' @param width Fixed width of the column in pixels. Overrides `minWidth` and `maxWidth`.
-#' @param align Column alignment. One of `"left"`, `"right"`, `"center"`.
+#' @param align Horizontal alignment of content in the column. One of
+#'   `"left"`, `"right"`, `"center"`. By default, all numbers are right-aligned,
+#'   while all other content is left-aligned.
+#' @param vAlign Vertical alignment of content in data cells. One of `"top"`
+#'   (the default), `"center"`, `"bottom"`.
+#' @param headerVAlign Vertical alignment of content in header cells. One of
+#'   `"top"` (the default), `"center"`, `"bottom"`.
+#' @param sticky Make the column sticky when scrolling horizontally? Either
+#'   `"left"` or `"right"` to make the column stick to the left or right side.
+#'
+#'   If a sticky column is in a column group, all columns in the group will
+#'   automatically be made sticky, including the column group header.
 #' @param class Additional CSS classes to apply to cells. Can also be an R function
 #'   that takes the cell value, row index, and column name as arguments, or a [JS()]
-#'   function that takes a row info object, column info object, and table state
-#'   object as arguments.
+#'   function that takes a row info object, column object, and table state object
+#'   as arguments.
 #'
 #'   Note that R functions cannot apply classes to aggregated cells.
 #' @param style Inline styles to apply to cells. A named list or character string.
 #'   Can also be an R function that takes the cell value and row index as arguments,
-#'   or a [JS()] function that takes a row info object, column info object, and
+#'   or a [JS()] function that takes a row info object, column object, and
 #'   table state object as arguments.
 #'
 #'   Note that R functions cannot apply styles to aggregated cells.
@@ -78,18 +116,47 @@
 #' )
 #'
 #' @export
-colDef <- function(name = NULL, aggregate = NULL, sortable = NULL,
-                   resizable = NULL, filterable = NULL, show = TRUE,
-                   defaultSortOrder = NULL, sortNALast = FALSE, format = NULL,
-                   cell = NULL, aggregated = NULL, header = NULL, footer = NULL,
-                   details = NULL, html = FALSE, na = "", minWidth = NULL,
-                   maxWidth = NULL, width = NULL, align = NULL, class = NULL,
-                   style = NULL, headerClass = NULL, headerStyle = NULL,
-                   footerClass = NULL, footerStyle = NULL) {
+colDef <- function(
+  name = NULL,
+  aggregate = NULL,
+  sortable = NULL,
+  resizable = NULL,
+  filterable = NULL,
+  searchable = NULL,
+  filterMethod = NULL,
+  show = TRUE,
+  defaultSortOrder = NULL,
+  sortNALast = FALSE,
+  format = NULL,
+  cell = NULL,
+  grouped = NULL,
+  aggregated = NULL,
+  header = NULL,
+  footer = NULL,
+  details = NULL,
+  filterInput = NULL,
+  html = FALSE,
+  na = "",
+  rowHeader = FALSE,
+  minWidth = 100,
+  maxWidth = NULL,
+  width = NULL,
+  align = NULL,
+  vAlign = NULL,
+  headerVAlign = NULL,
+  sticky = NULL,
+  class = NULL,
+  style = NULL,
+  headerClass = NULL,
+  headerStyle = NULL,
+  footerClass = NULL,
+  footerStyle = NULL
+) {
 
   if (!is.null(name) && !is.character(name)) {
     stop("`name` must be a character string")
   }
+
   if (!is.null(aggregate)) {
     if (is.character(aggregate) && !is.JS(aggregate)) {
       aggregators <- c("mean", "sum", "max", "min", "median", "count",
@@ -101,24 +168,39 @@ colDef <- function(name = NULL, aggregate = NULL, sortable = NULL,
       stop("`aggregate` must be a character string or JS function")
     }
   }
+
   if (!is.null(sortable) && !is.logical(sortable)) {
     stop("`sortable` must be TRUE or FALSE")
   }
+
   if (!is.null(resizable) && !is.logical(resizable)) {
     stop("`resizable` must be TRUE or FALSE")
   }
+
   if (!is.null(filterable) && !is.logical(filterable)) {
     stop("`filterable` must be TRUE or FALSE")
   }
-  if (!is.logical(show)) {
+
+  if (!is.null(searchable) && !is.logical(searchable)) {
+    stop("`searchable` must be TRUE or FALSE")
+  }
+
+  if (!is.null(filterMethod) && !is.JS(filterMethod)) {
+    stop('`filterMethod` must be a JS function')
+  }
+
+  if (!is.null(show) && !is.logical(show)) {
     stop("`show` must be TRUE or FALSE")
   }
+
   if (!is.null(defaultSortOrder) && !isSortOrder(defaultSortOrder)) {
     stop('`defaultSortOrder` must be "asc" or "desc"')
   }
-  if (!is.logical(sortNALast)) {
+
+  if (!is.null(sortNALast) && !is.logical(sortNALast)) {
     stop("`sortNALast` must be TRUE or FALSE")
   }
+
   if (!is.null(format)) {
     if (!is.colFormat(format) && !isNamedList(format)) {
       stop('`format` must be a column formatting option set or named list')
@@ -135,54 +217,99 @@ colDef <- function(name = NULL, aggregate = NULL, sortable = NULL,
       }
     }
   }
+
   if (!is.null(cell) && !is.JS(cell) && !is.function(cell)) {
     stop("`cell` renderer must be an R function or JS function")
   }
+
+  if (!is.null(grouped) && !is.JS(grouped)) {
+    stop("`grouped` renderer must be a JS function")
+  }
+
   if (!is.null(aggregated) && !is.JS(aggregated)) {
     stop("`aggregated` renderer must be a JS function")
   }
+
   if (!is.null(details) && !is.function(details) && !is.JS(details) && !is.list(details)) {
     stop("`details` renderer must be an R function or JS function")
   }
-  if (!is.logical(html)) {
+
+  if (!is.null(html) && !is.logical(html)) {
     stop("`html` must be TRUE or FALSE")
   }
-  if (!is.character(na)) {
+
+  if (!is.null(na) && !is.character(na)) {
     stop("`na` must be a character string")
   }
+
+  if (!is.null(rowHeader) && !is.logical(rowHeader)) {
+    stop("`rowHeader` must be TRUE or FALSE")
+  }
+
   if (!is.null(minWidth) && !is.numeric(minWidth)) {
     stop("`minWidth` must be numeric")
   }
+
   if (!is.null(maxWidth) && !is.numeric(maxWidth)) {
     stop("`maxWidth` must be numeric")
   }
+
   if (!is.null(width) && !is.numeric(width)) {
     stop("`width` must be numeric")
   }
+
   if (!is.null(align)) {
     if (!isTRUE(align %in% c("left", "right", "center"))) {
       stop('`align` must be one of "left", "right", "center"')
     }
   }
+
+  if (!is.null(vAlign)) {
+    if (!isTRUE(vAlign %in% c("top", "center", "bottom"))) {
+      stop('`vAlign` must be one of "top", "center", "bottom"')
+    }
+  }
+
+  if (!is.null(headerVAlign)) {
+    if (!isTRUE(headerVAlign %in% c("top", "center", "bottom"))) {
+      stop('`headerVAlign` must be one of "top", "center", "bottom"')
+    }
+  }
+
+  if (!is.null(sticky)) {
+    if (!isTRUE(sticky %in% c("left", "right"))) {
+      stop('`sticky` must be "left" or "right"')
+    }
+  }
+
   if (!is.null(class) && !is.character(class) && !is.JS(class) && !is.function(class)) {
     stop("`class` must be a character string, JS function, or R function")
   }
+
   if (!is.null(style) && !isNamedList(style) && !is.character(style) &&
       !is.JS(style) && !is.function(style)) {
     stop("`style` must be a named list, character string, JS function, or R function")
   }
+
   if (!is.null(headerClass) && !is.character(headerClass)) {
     stop("`headerClass` must be a character string")
   }
+
   if (!is.null(headerStyle) && !isNamedList(headerStyle) && !is.character(headerStyle)) {
     stop("`headerStyle` must be a named list or character string")
   }
+
   if (!is.null(footerClass) && !is.character(footerClass)) {
     stop("`footerClass` must be a character string")
   }
+
   if (!is.null(footerStyle) && !isNamedList(footerStyle) && !is.character(footerStyle)) {
     stop("`footerStyle` must be a named list or character string")
   }
+
+  # If an arg with a non-NULL default value wasn't specified by the user, filter
+  # them out so they can take on the default from a default column definition.
+  userArgs <- names(match.call())[-1]
 
   structure(
     filterNulls(list(
@@ -191,21 +318,29 @@ colDef <- function(name = NULL, aggregate = NULL, sortable = NULL,
       sortable = sortable,
       resizable = resizable,
       filterable = filterable,
-      show = if (!show) FALSE,
+      searchable = searchable,
+      filterMethod = filterMethod,
+      show = if ("show" %in% userArgs) show,
       defaultSortDesc = if (!is.null(defaultSortOrder)) isDescOrder(defaultSortOrder),
-      sortNALast = if (sortNALast) TRUE,
+      sortNALast = if ("sortNALast" %in% userArgs) sortNALast,
       format = format,
       cell = cell,
+      grouped = grouped,
       aggregated = aggregated,
       header = header,
       footer = footer,
       details = details,
-      html = if (html) TRUE,
-      na = if (na != "") na,
-      minWidth = minWidth,
+      filterInput = filterInput,
+      html = if ("html" %in% userArgs) html,
+      na = if ("na" %in% userArgs) na,
+      rowHeader = if ("rowHeader" %in% userArgs) rowHeader,
+      minWidth = if ("minWidth" %in% userArgs) minWidth,
       maxWidth = maxWidth,
       width = width,
       align = align,
+      vAlign = vAlign,
+      headerVAlign = headerVAlign,
+      sticky = sticky,
       className = class,
       style = if (is.function(style) || is.JS(style)) style else asReactStyle(style),
       headerClassName = headerClass,
@@ -236,9 +371,18 @@ isDescOrder <- function(x) {
 #' @param name Column group header name.
 #' @param columns Character vector of column names in the group.
 #' @param header Custom header renderer. An R function that takes the header value
-#'   as an argument, or a [JS()] function that takes a column info object as an argument.
+#'   as an argument, or a [JS()] function that takes a column object and
+#'   table state object as arguments.
 #' @param html Render header content as HTML? Raw HTML strings are escaped by default.
-#' @param align Column group header alignment. One of `"left"`, `"right"`, `"center"`.
+#' @param align Horizontal alignment of content in the column group header. One of
+#'   `"left"`, `"right"`, `"center"` (the default).
+#' @param headerVAlign Vertical alignment of content in the column group header. One of
+#'   `"top"` (the default), `"center"`, `"bottom"`.
+#' @param sticky Make the column group sticky when scrolling horizontally? Either
+#'   `"left"` or `"right"` to make the column group stick to the left or right side.
+#'
+#'   If a column group is sticky, all columns in the group will automatically
+#'   be made sticky.
 #' @param headerClass Additional CSS classes to apply to the header.
 #' @param headerStyle Inline styles to apply to the header. A named list or
 #'   character string.
@@ -263,8 +407,17 @@ isDescOrder <- function(x) {
 #' )
 #'
 #' @export
-colGroup <- function(name = NULL, columns = NULL, header = NULL, html = FALSE,
-                     align = NULL, headerClass = NULL, headerStyle = NULL) {
+colGroup <- function(
+  name = NULL,
+  columns = NULL,
+  header = NULL,
+  html = FALSE,
+  align = NULL,
+  headerVAlign = NULL,
+  sticky = NULL,
+  headerClass = NULL,
+  headerStyle = NULL
+) {
   if (!is.null(name) && !is.character(name)) {
     stop("`name` must be a character string")
   }
@@ -277,15 +430,23 @@ colGroup <- function(name = NULL, columns = NULL, header = NULL, html = FALSE,
     }
   }
 
+  # If an arg with a non-NULL default value wasn't specified by the user, filter
+  # them out so they can take on the default from a default column definition.
+  userArgs <- names(match.call())[-1]
+
+  args <- filterNulls(list(
+    name = name,
+    header = header,
+    html = if ("html" %in% userArgs) html,
+    align = align,
+    headerVAlign = headerVAlign,
+    sticky = sticky,
+    headerClass = headerClass,
+    headerStyle = headerStyle
+  ))
+
   group <- tryCatch({
-    colDef(
-      name = name,
-      header = header,
-      html = html,
-      align = align,
-      headerClass = headerClass,
-      headerStyle = headerStyle
-    )
+    do.call(colDef, args)
   }, error = function(e) e)
 
   if (inherits(group, "error")) {
@@ -328,8 +489,8 @@ is.colGroup <- function(x) {
 #'   a locale is unsupported. When multiple locales are specified, the first
 #'   supported locale will be used.
 #'
-#'   See [here](https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a)
-#'   for a list of common BCP 47 language tags.
+#'   See a list of [common BCP 47 language tags](https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a)
+#'   for reference.
 #' @return A column format object that can be used to customize data formatting
 #'   in `colDef()`.
 #'
@@ -407,18 +568,22 @@ is.colGroup <- function(x) {
 #'   Area = state.area
 #' )
 #'
-#' reactable(data, groupBy = "Region", columns = list(
-#'   States = colDef(
-#'     aggregate = "count",
-#'     format = list(
-#'       aggregated = colFormat(suffix = " states")
+#' reactable(
+#'   data,
+#'   groupBy = "Region",
+#'   columns = list(
+#'     States = colDef(
+#'       aggregate = "count",
+#'       format = list(
+#'         aggregated = colFormat(suffix = " states")
+#'       )
+#'     ),
+#'     Area = colDef(
+#'       aggregate = "sum",
+#'       format = colFormat(suffix = " mi\u00b2", separators = TRUE)
 #'     )
-#'   ),
-#'   Area = colDef(
-#'     aggregate = "sum",
-#'     format = colFormat(suffix = " mi\u00b2", separators = TRUE)
 #'   )
-#' ))
+#' )
 #'
 #' @export
 colFormat <- function(prefix = NULL, suffix = NULL, digits = NULL,

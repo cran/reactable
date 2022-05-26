@@ -1,12 +1,12 @@
 # reactable
 
 [![CRAN Status](https://www.r-pkg.org/badges/version/reactable)](https://cran.r-project.org/package=reactable)
-[![Build Status](https://travis-ci.com/glin/reactable.svg?branch=master)](https://travis-ci.com/glin/reactable)
-[![codecov](https://codecov.io/gh/glin/reactable/branch/master/graph/badge.svg)](https://codecov.io/gh/glin/reactable)
-[![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![Build Status](https://github.com/glin/reactable/workflows/build/badge.svg)](https://github.com/glin/reactable/actions)
+[![codecov](https://codecov.io/gh/glin/reactable/branch/master/graph/badge.svg)](https://app.codecov.io/gh/glin/reactable)
+[![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
 Interactive data tables for R, based on the
-[React Table](https://github.com/tannerlinsley/react-table) library and made with
+[React Table](https://github.com/tanstack/table/tree/v7) library and made with
 [reactR](https://github.com/react-R/reactR).
 
 ## Features
@@ -24,6 +24,7 @@ Interactive data tables for R, based on the
 - [NBA Box Score](https://glin.github.io/reactable/articles/nba-box-score/nba-box-score.html)
 - [CRAN Packages](https://glin.github.io/reactable/articles/cran-packages/cran-packages.html)
 - [Spotify Charts](https://glin.github.io/reactable/articles/spotify-charts/spotify-charts.html)
+- [Popular Movies](https://glin.github.io/reactable/articles/popular-movies/popular-movies.html)
 - [Demo Cookbook](https://glin.github.io/reactable/articles/cookbook/cookbook.html)
 - [100k Rows](https://glin.github.io/reactable/articles/100k-rows.html)
 - [Shiny Demo](https://glin.github.io/reactable/articles/shiny-demo.html)
@@ -97,11 +98,13 @@ To learn more about using reactable, check out the examples below.
 - [Theming](https://glin.github.io/reactable/articles/examples.html#theming)
 - [Column Groups](https://glin.github.io/reactable/articles/examples.html#column-groups)
 - [Column Resizing](https://glin.github.io/reactable/articles/examples.html#column-resizing)
-- [Row Names](https://glin.github.io/reactable/articles/examples.html#row-names)
+- [Sticky Columns](https://glin.github.io/reactable/articles/examples.html#sticky-columns)
+- [Row Names and Row Headers](https://glin.github.io/reactable/articles/examples.html#row-names-and-row-headers)
 - [Cell Click Actions](https://glin.github.io/reactable/articles/examples.html#cell-click-actions)
 - [Language Options](https://glin.github.io/reactable/articles/examples.html#language-options)
 - [Shiny](https://glin.github.io/reactable/articles/examples.html#shiny)
 - [Cross-Widget Interactions with Crosstalk](https://glin.github.io/reactable/articles/examples.html#cross-widget-interactions)
+- [JavaScript API](https://glin.github.io/reactable/articles/examples.html#javascript-api)
 
 ## Browser Support
 | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="IE / Edge" width="24px" height="24px" />](https://godban.github.io/browsers-support-badges/)<br>IE / Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](https://godban.github.io/browsers-support-badges/)<br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](https://godban.github.io/browsers-support-badges/)<br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](https://godban.github.io/browsers-support-badges/)<br>Safari | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/opera/opera_48x48.png" alt="Opera" width="24px" height="24px" />](https://godban.github.io/browsers-support-badges/)<br>Opera |

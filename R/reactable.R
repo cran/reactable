@@ -22,6 +22,9 @@
 #' @param rownames Show row names? Defaults to `TRUE` if the data has row names.
 #'
 #'   To customize the row names column, use `".rownames"` as the column name.
+#'
+#'   Cells in the row names column are automatically marked up as row headers
+#'   for assistive technologies.
 #' @param groupBy Character vector of column names to group by.
 #'
 #'   To aggregate data when rows are grouped, use the `aggregate` argument in [colDef()].
@@ -29,6 +32,10 @@
 #' @param resizable Enable column resizing?
 #' @param filterable Enable column filtering?
 #' @param searchable Enable global table searching?
+#' @param searchMethod Custom search method to use for global table searching.
+#'   A [JS()] function that takes an array of row objects, an array of
+#'   column IDs, and the search value as arguments, and returns the filtered
+#'   array of row objects.
 #' @param defaultColDef Default column definition used by every column. See [colDef()].
 #' @param defaultColGroup Default column group definition used by every column group.
 #'   See [colGroup()].
@@ -47,10 +54,11 @@
 #'   than one page.
 #' @param showPageInfo Show page info? Defaults to `TRUE`.
 #' @param minRows Minimum number of rows to show per page. Defaults to 1.
+#' @param paginateSubRows When rows are grouped, paginate sub rows? Defaults to `FALSE`.
 #' @param details Additional content to display when expanding a row. An R function
-#'   that takes a row index argument or a [JS()] function that takes
-#'   a row info object as an argument. Can also be a [colDef()] to customize the
-#'   details expander column.
+#'   that takes the row index and column name as arguments, or a [JS()] function
+#'   that takes a row info object as an argument. Can also be a [colDef()] to
+#'   customize the details expander column.
 #' @param defaultExpanded Expand all rows by default?
 #' @param selection Enable row selection? Either `"multiple"` or `"single"` for
 #'   multiple or single row selection.
@@ -65,7 +73,7 @@
 #' @param defaultSelected A numeric vector of default selected row indices.
 #' @param onClick Action to take when clicking a cell. Either `"expand"` to expand
 #'   the row, `"select"` to select the row, or a [JS()] function that takes a
-#'   row info object, column info object, and table state object as arguments.
+#'   row info object, column object, and table state object as arguments.
 #' @param highlight Highlight table rows on hover?
 #' @param outlined Add borders around the table?
 #' @param bordered Add borders around the table and every cell?
@@ -120,12 +128,16 @@
 #' reactable(iris)
 #'
 #' # Grouping and aggregation
-#' reactable(iris, groupBy = "Species", columns = list(
-#'   Sepal.Length = colDef(aggregate = "count"),
-#'   Sepal.Width = colDef(aggregate = "mean"),
-#'   Petal.Length = colDef(aggregate = "sum"),
-#'   Petal.Width = colDef(aggregate = "max")
-#' ))
+#' reactable(
+#'   iris,
+#'   groupBy = "Species",
+#'   columns = list(
+#'     Sepal.Length = colDef(aggregate = "count"),
+#'     Sepal.Width = colDef(aggregate = "mean"),
+#'     Petal.Length = colDef(aggregate = "sum"),
+#'     Petal.Width = colDef(aggregate = "max")
+#'   )
+#' )
 #'
 #' # Row details
 #' reactable(iris, details = function(index) {
@@ -150,26 +162,56 @@
 #' ))
 #'
 #' @export
-reactable <- function(data, columns = NULL, columnGroups = NULL,
-                      rownames = NULL, groupBy = NULL,
-                      sortable = TRUE, resizable = FALSE, filterable = FALSE,
-                      searchable = FALSE, defaultColDef = NULL, defaultColGroup = NULL,
-                      defaultSortOrder = "asc", defaultSorted = NULL,
-                      pagination = TRUE, defaultPageSize = 10,
-                      showPageSizeOptions = FALSE, pageSizeOptions = c(10, 25, 50, 100),
-                      paginationType = "numbers", showPagination = NULL, showPageInfo = TRUE,
-                      minRows = 1, details = NULL, defaultExpanded = FALSE,
-                      selection = NULL, selectionId = NULL,
-                      defaultSelected = NULL, onClick = NULL,
-                      highlight = FALSE, outlined = FALSE, bordered = FALSE,
-                      borderless = FALSE, striped = FALSE, compact = FALSE, wrap = TRUE,
-                      showSortIcon = TRUE, showSortable = FALSE,
-                      class = NULL, style = NULL, rowClass = NULL, rowStyle = NULL,
-                      fullWidth = TRUE, width = "auto", height = "auto",
-                      theme = getOption("reactable.theme"),
-                      language = getOption("reactable.language"),
-                      elementId = NULL) {
-
+reactable <- function(
+  data,
+  columns = NULL,
+  columnGroups = NULL,
+  rownames = NULL,
+  groupBy = NULL,
+  sortable = TRUE,
+  resizable = FALSE,
+  filterable = FALSE,
+  searchable = FALSE,
+  searchMethod = NULL,
+  defaultColDef = NULL,
+  defaultColGroup = NULL,
+  defaultSortOrder = "asc",
+  defaultSorted = NULL,
+  pagination = TRUE,
+  defaultPageSize = 10,
+  showPageSizeOptions = FALSE,
+  pageSizeOptions = c(10, 25, 50, 100),
+  paginationType = "numbers",
+  showPagination = NULL,
+  showPageInfo = TRUE,
+  minRows = 1,
+  paginateSubRows = FALSE,
+  details = NULL,
+  defaultExpanded = FALSE,
+  selection = NULL,
+  selectionId = NULL,
+  defaultSelected = NULL,
+  onClick = NULL,
+  highlight = FALSE,
+  outlined = FALSE,
+  bordered = FALSE,
+  borderless = FALSE,
+  striped = FALSE,
+  compact = FALSE,
+  wrap = TRUE,
+  showSortIcon = TRUE,
+  showSortable = FALSE,
+  class = NULL,
+  style = NULL,
+  rowClass = NULL,
+  rowStyle = NULL,
+  fullWidth = TRUE,
+  width = "auto",
+  height = "auto",
+  theme = getOption("reactable.theme"),
+  language = getOption("reactable.language"),
+  elementId = NULL
+) {
   crosstalkKey <- NULL
   crosstalkGroup <- NULL
   dependencies <- list()
@@ -211,6 +253,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     if (rownamesKey %in% names(columns)) {
       rownamesColumn <- mergeLists(rownamesColumn, columns[[rownamesKey]])
     }
+    rownamesColumn$rowHeader <- TRUE
     columns[[rownamesKey]] <- rownamesColumn
   }
 
@@ -222,25 +265,39 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
       stop("`details` cannot be used on a grouping column")
     }
   }
+
   if (!is.logical(sortable)) {
     stop("`sortable` must be TRUE or FALSE")
   }
+
   if (!is.logical(resizable)) {
     stop("`resizable` must be TRUE or FALSE")
   }
+
   if (!is.logical(filterable)) {
     stop("`filterable` must be TRUE or FALSE")
   }
+
   if (!is.logical(searchable)) {
     stop("`searchable` must be TRUE or FALSE")
   }
 
+  if (!is.null(searchMethod) && !is.JS(searchMethod)) {
+    stop('`searchMethod` must be a JS function')
+  }
+
   columnKeys <- colnames(data)
+
+  # Exclude special column for sub rows
+  subRowsKey <- ".subRows"
+  columnKeys <- columnKeys[columnKeys != subRowsKey]
+
   if (!is.null(details)) {
     detailsKey <- ".details"
     columnKeys <- c(detailsKey, columnKeys)
     detailsColumn <- colDef(name = "", sortable = FALSE, filterable = FALSE,
-                            resizable = FALSE, width = 45, align = "center")
+                            searchable = FALSE, resizable = FALSE, width = 45,
+                            align = "center")
     if (is.colDef(details)) {
       detailsColumn <- mergeLists(detailsColumn, details)
     } else {
@@ -249,15 +306,18 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     # Prepend column
     columns <- c(stats::setNames(list(detailsColumn), detailsKey), columns)
   }
+
   if (!is.null(selection)) {
     selectionKey <- ".selection"
     columnKeys <- c(selectionKey, columnKeys)
-    selectionColumn <- colDef(name = "")
+    selectionColumn <- colDef(name = "", resizable = FALSE, width = 45)
+    selectionColumn$selectable <- TRUE
     if (selectionKey %in% names(columns)) {
       selectionColumn <- mergeLists(selectionColumn, columns[[selectionKey]])
     }
     columns[[selectionKey]] <- selectionColumn
   }
+
   if (!is.null(defaultColDef)) {
     if (!is.colDef(defaultColDef)) {
       stop("`defaultColDef` must be a column definition")
@@ -267,6 +327,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     })
     columns <- stats::setNames(columns, columnKeys)
   }
+
   if (!is.null(defaultColGroup)) {
     if (!is.colGroup(defaultColGroup)) {
       stop("`defaultColGroup` must be a column group definition")
@@ -275,6 +336,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
       mergeLists(defaultColGroup, group)
     })
   }
+
   if (!is.null(columns)) {
     if (!isNamedList(columns) || !all(sapply(columns, is.colDef))) {
       stop("`columns` must be a named list of column definitions")
@@ -283,6 +345,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
       stop("`columns` names must exist in `data`")
     }
   }
+
   if (!is.null(columnGroups)) {
     if (!all(sapply(columnGroups, is.colGroup))) {
       stop("`columnGroups` must be a list of column group definitions")
@@ -323,8 +386,6 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   }
   if (!is.logical(pagination)) {
     stop("`pagination` must be TRUE or FALSE")
-  } else if (!pagination) {
-    defaultPageSize <- nrow(data)
   }
   if (!is.numeric(defaultPageSize)) {
     stop("`defaultPageSize` must be numeric")
@@ -332,8 +393,11 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   if (!is.logical(showPageSizeOptions)) {
     stop("`showPageSizeOptions` must be TRUE or FALSE")
   }
-  if (!is.numeric(pageSizeOptions)) {
-    stop("`pageSizeOptions` must be numeric")
+  if (!is.null(pageSizeOptions)) {
+    if (!is.numeric(pageSizeOptions)) {
+      stop("`pageSizeOptions` must be numeric")
+    }
+    pageSizeOptions <- as.list(pageSizeOptions)
   }
   if (!paginationType %in% c("numbers", "jump", "simple")) {
     stop('`paginationType` must be one of "numbers", "jump", "simple"')
@@ -346,6 +410,9 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   }
   if (!is.numeric(minRows)) {
     stop("`minRows` must be numeric")
+  }
+  if (!is.logical(paginateSubRows)) {
+    stop("`paginateSubRows` must be TRUE or FALSE")
   }
   if (!is.logical(defaultExpanded)) {
     stop("`defaultExpanded` must be TRUE or FALSE")
@@ -497,10 +564,22 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     details <- column[["details"]]
     if (is.function(details)) {
       details <- lapply(seq_len(nrow(data)), function(index) {
-        callFunc(details, index)
+        callFunc(details, index, key)
       })
       column$details <- lapply(details, asReactTag)
       addDependencies(column$details)
+    }
+
+    filterInput <- column[["filterInput"]]
+    if (!is.null(filterInput)) {
+      if (is.function(filterInput)) {
+        values <- data[[key]]
+        filterInput <- callFunc(filterInput, values, key)
+      }
+      if (!is.JS(filterInput)) {
+        column$filterInput <- asReactTag(filterInput)
+        addDependencies(column$filterInput)
+      }
     }
 
     className <- column[["className"]]
@@ -541,12 +620,19 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
   }
 
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE, digits = NA,
-                           POSIXt = "ISO8601", Date = "ISO8601")
+                           POSIXt = "ISO8601", Date = "ISO8601", UTC = TRUE, force = TRUE,
+                           auto_unbox = TRUE)
 
-  # Create a unique key for the data. The key is used to optimize performance of
-  # row selection and expansion, and to fully reset state on data changes (for
-  # tables in Shiny).
+  # Create a unique key for the data. The key is used to fully reset state when
+  # the data changes (for tables in Shiny).
   dataKey <- digest::digest(list(data, cols))
+
+  if (isV2()) {
+    widgetName <- "reactable"
+  } else {
+    widgetName <- "reactable_v1"
+    class <- paste("reactable", class)
+  }
 
   component <- reactR::component("Reactable", list(
     data = data,
@@ -557,8 +643,10 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     resizable = if (resizable) TRUE,
     filterable = if (filterable) TRUE,
     searchable = if (searchable) TRUE,
+    searchMethod = searchMethod,
     defaultSortDesc = if (isDescOrder(defaultSortOrder)) TRUE,
     defaultSorted = columnSortDefs(defaultSorted),
+    pagination = if (!pagination) FALSE,
     defaultPageSize = defaultPageSize,
     showPageSizeOptions = if (showPageSizeOptions) TRUE,
     pageSizeOptions = if (showPageSizeOptions) pageSizeOptions,
@@ -566,6 +654,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     showPagination = if (!is.null(showPagination)) showPagination,
     showPageInfo = showPageInfo,
     minRows = minRows,
+    paginateSubRows = if (paginateSubRows) TRUE,
     defaultExpanded = if (defaultExpanded) defaultExpanded,
     selection = selection,
     selectionId = selectionId,
@@ -591,15 +680,18 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     language = language,
     crosstalkKey = crosstalkKey,
     crosstalkGroup = crosstalkGroup,
+    elementId = elementId,
     dataKey = dataKey,
-    key = dataKey
+    key = if (!isV2()) dataKey
   ))
 
   htmlwidgets::createWidget(
-    name = "reactable",
+    name = widgetName,
     reactR::reactMarkup(component),
     width = width,
     height = height,
+    # Don't limit width when rendered inside an R Notebook
+    sizingPolicy = htmlwidgets::sizingPolicy(knitr.figure = FALSE),
     package = "reactable",
     dependencies = dependencies,
     elementId = elementId
@@ -665,7 +757,8 @@ columnSortDefs <- function(defaultSorted) {
 #'
 #' @export
 reactableOutput <- function(outputId, width = "auto", height = "auto", inline = FALSE) {
-  output <- htmlwidgets::shinyWidgetOutput(outputId, "reactable", width, height,
+  widgetName <- if (isV2()) "reactable" else "reactable_v1"
+  output <- htmlwidgets::shinyWidgetOutput(outputId, widgetName, width, height,
                                            inline = inline, package = "reactable")
   # Add attribute to Shiny output containers to differentiate them from static widgets
   addOutputId <- function(x) {
@@ -695,7 +788,7 @@ renderReactable <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' @param class Element class.
 #' @param ... Additional arguments.
 #' @keywords internal
-reactable_html <- function(id, style, class, ...) {
+widget_html.reactable <- function(id, style, class, ...) {
   # Set text color in R Notebooks to prevent contrast issues when
   # using a dark editor theme and htmltools 0.4.0.
   if (isTRUE(getOption("rstudio.notebook.executing"))) {
@@ -709,3 +802,18 @@ reactable_html <- function(id, style, class, ...) {
     htmltools::tags$div(id = id, class = class, style = style)
   )
 }
+
+# Deprecated convention for htmlwidgets <= 1.5.2 support
+reactable_html <- widget_html.reactable
+
+isV2 <- function() {
+  getOption("reactable.v2", TRUE)
+}
+
+reactable_v1 <- function(..., class = NULL) {
+  old <- options(reactable.v2 = FALSE)
+  on.exit(options(old))
+  reactable(...)
+}
+
+reactable_v1_html <- widget_html.reactable

@@ -10,6 +10,8 @@ colGroup(
   header = NULL,
   html = FALSE,
   align = NULL,
+  headerVAlign = NULL,
+  sticky = NULL,
   headerClass = NULL,
   headerStyle = NULL
 )
@@ -20,11 +22,22 @@ colGroup(
 \item{columns}{Character vector of column names in the group.}
 
 \item{header}{Custom header renderer. An R function that takes the header value
-as an argument, or a \code{\link[=JS]{JS()}} function that takes a column info object as an argument.}
+as an argument, or a \code{\link[=JS]{JS()}} function that takes a column object and
+table state object as arguments.}
 
 \item{html}{Render header content as HTML? Raw HTML strings are escaped by default.}
 
-\item{align}{Column group header alignment. One of \code{"left"}, \code{"right"}, \code{"center"}.}
+\item{align}{Horizontal alignment of content in the column group header. One of
+\code{"left"}, \code{"right"}, \code{"center"} (the default).}
+
+\item{headerVAlign}{Vertical alignment of content in the column group header. One of
+\code{"top"} (the default), \code{"center"}, \code{"bottom"}.}
+
+\item{sticky}{Make the column group sticky when scrolling horizontally? Either
+\code{"left"} or \code{"right"} to make the column group stick to the left or right side.
+
+If a column group is sticky, all columns in the group will automatically
+be made sticky.}
 
 \item{headerClass}{Additional CSS classes to apply to the header.}
 
