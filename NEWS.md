@@ -1,9 +1,99 @@
+# reactable 0.4.0
+
+## New features
+
+* **Experimental** support for rendering tables to static HTML in R. Use
+  `reactable(static = TRUE)` to render a table to static HTML, or `options(reactable.status = TRUE)`
+  to enable static rendering globally. With static rendering, tables are pre-rendered
+  to their initial HTML so they appear immediately without any flash of content.
+  Tables are then made interactive and subsequently rendered by JavaScript as needed.
+  Static rendering requires the V8 package, which is not installed with reactable
+  by default. Learn more in the [Static Rendering](https://glin.github.io/reactable/articles/static-rendering.html) article.
+* `reactable()` gains a `meta` argument to pass arbitrary data from R to JavaScript
+  render functions and style functions. Custom metadata can be accessed using the `state.meta` property, and updated
+  using `updateReactable()` in Shiny or `Reactable.setMeta()` in the JavaScript API. See examples of using
+  [custom metadata for custom rendering](https://glin.github.io/reactable/articles/examples.html#custom-meta-rendering)
+  or [custom metadata for conditional styling](https://glin.github.io/reactable/articles/examples.html#custom-meta-styling).
+  ([#255](https://github.com/glin/reactable/issues/255))
+* New [`Reactable.onStateChange()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-onstatechange)
+  method in the JavaScript API that sets up a function to be called whenever the
+  table state changes. ([#265](https://github.com/glin/reactable/issues/265))
+* New [`Reactable.setData()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-setdata)
+  method in the JavaScript API for updating the table data. ([#278](https://github.com/glin/reactable/issues/278))
+* [`Reactable.downloadDataCSV()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-downloaddatacsv)
+  in the JavaScript API now supports an additional `options` argument to change the field or decimal separator,
+  include specific columns, and exclude column headers. ([#239](https://github.com/glin/reactable/issues/239), [#293](https://github.com/glin/reactable/issues/293))
+* New [`Reactable.getDataCSV()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-getdatacsv)
+  method in the JavaScript API to get the table data as a CSV string.
+* New [`Reactable.toggleHideColumn()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-togglehidecolumn)
+  and [`Reactable.setHiddenColumns()`](https://glin.github.io/reactable/articles/javascript-api.html#reactable-sethiddencolumns)
+  methods in the JavaScript API to toggle or set hidden columns. JavaScript render functions and style functions
+  also receive a new `state.hiddenColumns` property for the hidden columns in the table. ([#246](https://github.com/glin/reactable/issues/246))
+* `getReactableState()` now includes the current sorted columns. ([#265](https://github.com/glin/reactable/issues/265))
+
+## Minor improvements and bug fixes
+
+* Updated the documentation site for Internet Explorer 11 (IE 11) deprecation,
+  Bootstrap 5 theming, and better accessibility. Examples now use modern JavaScript
+  features that aren't supported in IE 11, like template literals and arrow functions.
+  Examples now also use scalable font sizes and length units where appropriate
+  (i.e., `rem`/`em` instead of `px`). The documentation site uses the default
+  root font size of `16px`, so examples may look different on pages that change the
+  root font size. For example, Bootstrap 3 sets a default root font size of `10px`,
+  so you may need to adjust the `rem` values before adapting examples to your site.
+  (Bootstrap 4 and above no longer change the default root font size).
+* R style functions no longer apply to aggregated cells and rows incorrectly.
+  (@fawda123, [#250](https://github.com/glin/reactable/issues/250))
+* JavaScript render functions and style functions no longer receive an invalid
+  `cellInfo.index` or `rowInfo.index` property for aggregated cells and rows.
+  ([#250](https://github.com/glin/reactable/issues/250))
+* Column group header widths are now calculated correctly with hidden columns
+  in the column group. (@Patrikios, [#253](https://github.com/glin/reactable/issues/253))
+* `NULL` values in list-columns now correctly appear as missing values instead of
+  `[object Object]`. `NULL` values are now represented as `null` values in JavaScript
+  instead of an empty object like {}.
+* `reactableTheme()` styles no longer override custom user CSS in the
+  HTML document `<head>`.
+* `getReactableState()` now accepts multiple values in its `name` argument to return a subset of state values.
+* `reactable()` now respects `htmlwidget::sizingPolicy()`'s `viewer.fill` and `browser.fill` and fills the
+  RStudio Viewer pane by default. (@cpsievert, [#280](https://github.com/glin/reactable/issues/280))
+* Using `reactable()` on a dplyr grouped data frame ( `dplyr::group_by()` or `grouped_df`) with `rownames = TRUE`
+  no longer adds a `stringsAsFactors` column to the table. (@daattali, [#283](https://github.com/glin/reactable/issues/283))
+
+## Breaking changes
+
+* Numeric `NA` values are now represented as `null` in JavaScript instead of an `"NA"` string.
+  Numeric `NaN`, `Inf`, and `-Inf` values are now represented as `NaN`, `Infinity`, and `-Infinity`
+  in JavaScript instead of `"NaN"`, `"Inf"`, and `"-Inf"` strings. (@daattali, [#261](https://github.com/glin/reactable/issues/261))
+  ```js
+  function(cellInfo) {
+    // Old
+    cellInfo.value // "NA", "NaN", "Inf", "-Inf"
+
+    // New
+    cellInfo.value // null, NaN, Infinity, -Infinity
+  }
+  ```
+* Support for Internet Explorer 11 (IE 11) is deprecated. Existing features will continue
+  to work in IE 11, but new features may not support IE 11, and IE 11 is no longer tested.
+* The documentation website no longer supports IE 11.
+
 # reactable 0.3.0
 
+[Documentation - reactable 0.3.0](https://v0-3-0--reactable-docs.netlify.app/)
+
 This release upgrades to a new major version of React Table
-([#35](https://github.com/glin/reactable/issues/35)), which introduces many
-new features, improvements, and bug fixes. Backward compatibility was kept
-where possible, but note that there are several breaking changes.
+([#35](https://github.com/glin/reactable/issues/35)), which brings many
+new features, improvements, and bug fixes. reactable has been largely rewritten
+to take advantage of React Table's new approach as a flexible table utility
+rather than a table component.
+
+This means it'll be easier to add new custom features, customize styling and markup,
+and maintain reactable in the future. Most of the features and fixes in this release
+would not have been possible or easy to do without this upgrade.
+
+Backward compatibility was kept where possible, but note that there are several
+breaking changes, particularly around the JavaScript API.
 
 ## New features
 
@@ -74,6 +164,10 @@ where possible, but note that there are several breaking changes.
 
 ### JavaScript render and style functions
 
+Several properties and arguments have been renamed or moved for consistency with
+the rest of the API. These properties were not removed unless they were very
+rarely used, so most code should continue to work upon upgrading.
+
 * The `rowInfo.row` property is now **deprecated**, and has been renamed to
   `rowInfo.values`. `rowInfo.row` remains supported, but replace usages with
   `rowInfo.values` when possible.
@@ -92,7 +186,8 @@ where possible, but note that there are several breaking changes.
   functions are now **deprecated**. The `colInfo` object now contains all of the same
   properties as `colInfo.column`, and is now referred to as `column` in the documentation.
   When possible, replace usages of `colInfo` with `column`, `colInfo.column`
-  with `column`, and `colInfo.data` with `state.data` or `state.sortedData`.
+  with `column`, and `colInfo.data` with `state.sortedData` (current rows after sorting
+  and filtering) or `state.data` (the original data).
   ```js
   // Old
   function(colInfo) {
@@ -103,7 +198,7 @@ where possible, but note that there are several breaking changes.
   // New
   function(column, state) {
     column.id
-    state.data
+    state.sortedData
   }
   ```
 * The `state.expanded` property has been **removed**. To check whether a row is
@@ -168,6 +263,11 @@ where possible, but note that there are several breaking changes.
   ([#71](https://github.com/glin/reactable/issues/71)).
 * Increased the default width of the row selection column to match the row
   details column (45px).
+* The default cell padding can no longer be overridden using custom CSS or inline
+  styles on cells. To customize the cell padding, use a theme instead, like
+  `reactableTheme(cellPadding = "...")` ([#248](https://github.com/glin/reactable/issues/248),
+  [#142](https://github.com/glin/reactable/issues/142),
+  [#177](https://github.com/glin/reactable/issues/177)).
 
 ## Minor improvements and bug fixes
 

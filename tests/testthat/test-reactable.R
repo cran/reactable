@@ -1,44 +1,18 @@
 library(htmltools)
 
-getAttribs <- function(widget) {
-  widget$x$tag$attribs
-}
-
-getAttrib <- function(widget, name) {
-  widget$x$tag$attribs[[name]]
-}
-
 test_that("reactable handles invalid args", {
   # NOTE: New arguments should be tested in their own separate test
 
-  expect_error(reactable(1))
   df <- data.frame(x = 1)
-  expect_error(reactable(df, columns = "x"))
-  expect_error(reactable(df, columns = list(list())))
-  expect_error(reactable(df, columns = list(colDef())))
-  expect_error(reactable(df, columns = list(zzzz = colDef())))
-  expect_error(reactable(df, columnGroups = "x"))
-  expect_error(reactable(df, columnGroups = list(colDef())))
-  expect_error(reactable(df, columnGroups = list(colGroup(name = "", columns = "y"))))
-  expect_error(reactable(df, columnGroups = list(colGroup(name = ""))))
-  expect_error(reactable(df, rownames = "true"))
-  expect_error(reactable(df, groupBy = c("y", "z")))
-  expect_error(reactable(df, groupBy = "x", columns = list(x = colDef(details = function(i) i))))
   expect_error(reactable(df, sortable = "true"))
   expect_error(reactable(df, resizable = "true"))
-  expect_error(reactable(df, defaultColDef = list()))
-  expect_error(reactable(df, defaultColGroup = list()))
   expect_error(reactable(df, defaultSortOrder = "ascending"))
   expect_error(reactable(df, defaultSorted = "y"))
   expect_error(reactable(df, defaultSorted = list("x")))
   expect_error(reactable(df, defaultSorted = list(x = "ascending")))
   expect_error(reactable(df, defaultSorted = list(y = "asc")))
-  expect_error(reactable(df, showPageInfo = "true"))
-  expect_error(reactable(df, minRows = "2"))
   expect_error(reactable(df, defaultExpanded = NULL))
   expect_error(reactable(df, defaultExpanded = 1:3))
-  expect_error(reactable(df, selection = "none"))
-  expect_error(reactable(df, selectionId = 123))
   expect_error(reactable(df, defaultSelected = "12"))
   expect_error(reactable(df, onClick = "function() {}"))
   expect_error(reactable(df, highlight = "true"))
@@ -55,12 +29,12 @@ test_that("reactable handles invalid args", {
   expect_error(reactable(df, rowClass = 123))
   expect_error(reactable(df, rowStyle = 555))
   expect_error(reactable(df, fullWidth = "yes"))
-  expect_error(reactable(df, width = "asd"))
-  expect_error(reactable(df, height = "asd"))
 })
 
 test_that("reactable", {
   # NOTE: New arguments should be tested in their own separate test
+
+  expect_error(reactable(1), "`data` must be a data frame or matrix")
 
   # Default args
   tbl <- reactable(data.frame(x = 1, y = "b", stringsAsFactors = TRUE))
@@ -68,59 +42,42 @@ test_that("reactable", {
   data <- data.frame(x = 1, y = "b")
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE)
   columns <- list(
-    list(accessor = "x", name = "x", type = "numeric"),
-    list(accessor = "y", name = "y", type = "factor")
+    list(id = "x", name = "x", type = "numeric"),
+    list(id = "y", name = "y", type = "factor")
   )
   expected <- list(
     data = data,
     columns = columns,
-    defaultPageSize = 10,
-    paginationType = "numbers",
-    showPageInfo = TRUE,
-    minRows = 1,
-    dataKey = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns)),
+    static = FALSE
   )
   expect_equal(attribs, expected)
-  expect_equal(tbl$width, "auto")
-  expect_equal(tbl$height, "auto")
 
   # Table options
   tbl <- reactable(data.frame(x = "a", stringsAsFactors = TRUE), rownames = TRUE,
-                   columnGroups = list(colGroup("group", "x")),
                    sortable = FALSE, resizable = TRUE,
                    defaultSortOrder = "desc", defaultSorted = list(x = "asc"),
-                   showPageInfo = FALSE, minRows = 5, defaultExpanded = TRUE,
-                   selection = "single", selectionId = "sel", highlight = TRUE,
+                   defaultExpanded = TRUE, highlight = TRUE,
                    outlined = TRUE, bordered = TRUE, borderless = TRUE, striped = TRUE,
                    compact = TRUE, wrap = FALSE, showSortIcon = FALSE,
                    showSortable = TRUE, class = "tbl", style = list(color = "red"),
-                   fullWidth = FALSE, groupBy = "x", width = "400px", height = "100%")
+                   fullWidth = FALSE)
   attribs <- getAttribs(tbl)
   data <- data.frame(.rownames = 1, x = "a")
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE)
   columns <- list(
-    list(accessor = ".selection", name = "", type = "NULL", resizable = FALSE,
-         width = 45, selectable = TRUE),
-    list(accessor = ".rownames", name = "", type = "numeric",
+    list(id = ".rownames", name = "", type = "numeric",
          sortable = FALSE, filterable = FALSE, rowHeader = TRUE),
-    list(accessor = "x", name = "x", type = "factor")
+    list(id = "x", name = "x", type = "factor")
   )
   expected <- list(
     data = data,
     columns = columns,
-    columnGroups = list(colGroup("group", "x")),
-    pivotBy = list("x"),
     sortable = FALSE,
     resizable = TRUE,
     defaultSortDesc = TRUE,
     defaultSorted = list(list(id = "x", desc = FALSE)),
-    defaultPageSize = 10,
-    paginationType = "numbers",
-    showPageInfo = FALSE,
-    minRows = 5,
     defaultExpanded = TRUE,
-    selection = "single",
-    selectionId = "sel",
     highlight = TRUE,
     outlined = TRUE,
     bordered = TRUE,
@@ -133,23 +90,10 @@ test_that("reactable", {
     className = "tbl",
     style = list(color = "red"),
     inline = TRUE,
-    width = "400px",
-    height = "100%",
-    dataKey = digest::digest(list(data, columns))
+    dataKey = digest::digest(list(data, columns)),
+    static = FALSE
   )
   expect_equal(attribs, expected)
-  expect_equal(tbl$width, "400px")
-  expect_equal(tbl$height, "100%")
-  expect_equal(tbl$sizingPolicy$knitr$figure, FALSE)
-
-  # Column overrides
-  tbl <- reactable(data.frame(x = 1, y = "2"), columns = list(
-    x = colDef(sortable = FALSE),
-    y = colDef(name = "Y")
-  ))
-  attribs <- getAttribs(tbl)
-  expect_equal(attribs$columns[[1]]$sortable, FALSE)
-  expect_equal(attribs$columns[[2]]$name, "Y")
 
   # Style
   tbl <- reactable(data.frame(x = 1), style = " border-bottom: 1px solid; top: 50px")
@@ -181,14 +125,22 @@ test_that("data should have at least one column", {
   expect_length(attribs$columns, 2)
 })
 
-test_that("numbers are serialized with max precision", {
+test_that("data with numbers are serialized with max precision", {
   data <- data.frame(x = 0.123456789012345)  # 16 digits
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{"x":[0.123456789012345]}')
 })
 
-test_that("dates/datetimes are serialized in ISO 8601", {
+test_that("data with numeric NA, NaN, Inf, and -Inf are serialized correctly", {
+  # jsonlite::toJSON(na = "null") will serialize NA as null, but also discard NaN, Inf, and -Inf
+  data <- data.frame(n = c(1, NA, NaN, Inf, -Inf, 0, -1))
+  tbl <- reactable(data)
+  attribs <- getAttribs(tbl)
+  expect_equal(as.character(attribs$data), '{"n":[1,"NA","NaN","Inf","-Inf",0,-1]}')
+})
+
+test_that("data with dates/datetimes are serialized in ISO 8601", {
   data <- data.frame(x = as.POSIXct("2019-05-06 3:22:15", tz = "UTC"), y = as.Date("2010-12-30"))
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
@@ -210,7 +162,7 @@ test_that("data with custom classes not supported by jsonlite are serialized", {
   }
 })
 
-test_that("list-columns are serialized correctly", {
+test_that("data with list-columns are serialized correctly", {
   data <- data.frame(
     x = I(list(
       # Length-1 vectors should be unboxed, except when wrapped in I()
@@ -222,15 +174,17 @@ test_that("list-columns are serialized correctly", {
       list(x = TRUE),
       # Length-1 data frame columns should still be arrays
       data.frame(x = "y"),
+      # NULLs should be serialized as null, not jsonlite's default {}
+      NULL,
       NA
     ))
   )
   tbl <- reactable(data)
   attribs <- getAttribs(tbl)
-  expect_equal(as.character(attribs$data), '{"x":["x",["x"],["x"],[1,2,3],["a","b"],{"x":true},{"x":["y"]},null]}')
+  expect_equal(as.character(attribs$data), '{"x":["x",["x"],["x"],[1,2,3],["a","b"],{"x":true},{"x":["y"]},null,null]}')
 })
 
-test_that("supports Crosstalk", {
+test_that("data supports Crosstalk", {
   data <- crosstalk::SharedData$new(
     data.frame(x = c(1, 2), y = c("a", "b"), stringsAsFactors = FALSE),
     key = ~y,
@@ -259,13 +213,74 @@ test_that("supports Crosstalk", {
   expect_equal(attribs$crosstalkGroup, data$groupName())
 })
 
+test_that("columns", {
+  df <- data.frame(x = 1)
+  expect_error(reactable(df, columns = "x"), "`columns` must be a named list of column definitions")
+  expect_error(reactable(df, columns = list(list())), "`columns` must be a named list of column definitions")
+  expect_error(reactable(df, columns = list(colDef())), "`columns` must be a named list of column definitions")
+  expect_error(reactable(df, columns = list(zzzz = colDef())), "`columns` names must exist in `data`")
+
+  df <- data.frame(
+    chr = "a",
+    num = 1,
+    fct = factor("b"),
+    lgl = TRUE,
+    lst = I(list("a")),
+    stringsAsFactors = FALSE
+  )
+  tbl <- reactable(df)
+  columns <- getAttrib(tbl, "columns")
+  expect_equal(columns, list(
+    list(id = "chr", name = "chr", type = "character"),
+    list(id = "num", name = "num", type = "numeric"),
+    list(id = "fct", name = "fct", type = "factor"),
+    list(id = "lgl", name = "lgl", type = "logical"),
+    list(id = "lst", name = "lst", type = "AsIs")
+  ))
+
+  # Complex numbers currently fail due to `jsonlite::toJSON(3i, digits = NA)` error
+  tryCatch({
+    tbl <- reactable(data.frame(cpl = 3i))
+    columns <- getAttrib(tbl, "columns")
+    expect_equal(columns, list(id = "cpl", name = "cpl", type = "complex"))
+    writeLines("complex numbers test passed")
+  },
+  error = function(e) {
+    # Skipped due to error, "invalid value -2147483648 for 'digits' argument"
+  })
+})
+
+test_that("columnGroups", {
+  df <- data.frame(x = 1)
+  expect_error(reactable(df, columnGroups = "x"), "`columnGroups` must be a list of column group definitions")
+  expect_error(reactable(df, columnGroups = list(colDef())),
+               "`columnGroups` must be a list of column group definitions")
+  expect_error(reactable(df, columnGroups = list(colGroup(name = "", columns = "y"))),
+               "`columnGroups` columns must exist in `data`")
+  expect_error(reactable(df, columnGroups = list(colGroup(name = ""))),
+               "`columnGroups` groups must contain at least one column")
+
+  df <- data.frame(x = 1, y = 2, z = "z")
+  tbl <- reactable(df, columnGroups = list(
+    colGroup(columns = c("x", "z")),
+    colGroup(name = "y", columns = "y")
+  ))
+  expect_equal(getAttrib(tbl, "columnGroups"), list(
+    colGroup(columns = c("x", "z")),
+    colGroup(name = "y", columns = "y")
+  ))
+})
+
 test_that("rownames", {
+  expect_error(reactable(data.frame(x = 1), rownames = "true"),
+               "`rownames` must be TRUE or FALSE")
+
   # Integer row names
   tbl <- reactable(data.frame(x = c(1, 2, 3)), rownames = TRUE)
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{".rownames":[1,2,3],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".rownames", name = "",  type = "numeric",
+    id = ".rownames", name = "",  type = "numeric",
     sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
@@ -274,7 +289,7 @@ test_that("rownames", {
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{".rownames":["a","b","c"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".rownames", name = "",  type = "character",
+    id = ".rownames", name = "",  type = "character",
     sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
@@ -284,7 +299,7 @@ test_that("rownames", {
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".rownames", name = "N",  type = "numeric",
+    id = ".rownames", name = "N",  type = "numeric",
     sortable = TRUE, filterable = FALSE, headerClassName = "hdr", rowHeader = TRUE
   ))
 
@@ -304,7 +319,7 @@ test_that("rownames", {
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{".rownames":["a","b","c"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".rownames", name = "",  type = "character",
+    id = ".rownames", name = "",  type = "character",
     sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
   # Handles matrices
@@ -312,7 +327,7 @@ test_that("rownames", {
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{".rownames":["1","2","3"],"x":[1,2,3]}')
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".rownames", name = "",  type = "character",
+    id = ".rownames", name = "",  type = "character",
     sortable = FALSE, filterable = FALSE, rowHeader = TRUE
   ))
 
@@ -321,6 +336,29 @@ test_that("rownames", {
   attribs <- getAttribs(tbl)
   expect_equal(as.character(attribs$data), '{"x":[1,2,3]}')
   expect_equal(length(attribs$columns), 1)
+
+  # Should work with grouped_df from dplyr. cbind.data.frame() uses stringsAsFactors, but
+  # dplyr:::cbind.grouped_df() ignores it
+  grouped_df <- dplyr::grouped_df(data.frame(x = c(1, 2)), "x")
+  tbl <- reactable(grouped_df, rownames = TRUE)
+  expect_equal(as.character(getAttrib(tbl, "data")), '{".rownames":[1,2],"x":[1,2]}')
+})
+
+test_that("groupBy", {
+  data <- data.frame(x = 1, y = "a", z = TRUE)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "groupBy"), NULL)
+
+  tbl <- reactable(data, groupBy = "x")
+  expect_equal(getAttrib(tbl, "groupBy"), list("x"))
+
+  tbl <- reactable(data, groupBy = c("z", "x"))
+  expect_equal(getAttrib(tbl, "groupBy"), list("z", "x"))
+
+  expect_error(reactable(data, groupBy = c("z", "notexists")), "`groupBy` columns must exist in `data`")
+  expect_error(reactable(data, groupBy = "x", columns = list(x = colDef(details = function(i) i))),
+               "`details` cannot be used on a grouping column")
 })
 
 test_that("filterable", {
@@ -366,6 +404,9 @@ test_that("searchMethod", {
 })
 
 test_that("defaultColDef", {
+  expect_error(reactable(data.frame(x = 1), defaultColDef = list()),
+               "`defaultColDef` must be a column definition")
+
   # Defaults applied
   tbl <- reactable(
     data.frame(x = 1, y = "2"),
@@ -446,6 +487,9 @@ test_that("defaultColDef", {
 })
 
 test_that("defaultColGroup", {
+  expect_error(reactable(data.frame(x = 1), defaultColGroup = list()),
+               "`defaultColGroup` must be a column group definition")
+
   # Defaults applied
   tbl <- reactable(
     data.frame(x = 1, y = "2"),
@@ -556,24 +600,34 @@ test_that("pagination", {
   expect_error(reactable(data, pagination = "false"), "`pagination` must be TRUE or FALSE")
 })
 
-test_that("showPageSizeOptions and pageSizeOptions", {
+test_that("showPageSizeOptions", {
   data <- data.frame(x = 1)
 
-  tbl <- reactable(data.frame(x = 1))
+  tbl <- reactable(data)
   expect_equal(getAttrib(tbl, "showPageSizeOptions"), NULL)
-  expect_equal(getAttrib(tbl, "pageSizeOptions"), NULL)
 
-  # pageSizeOptions should be unset when page size options are hidden
-  tbl <- reactable(data.frame(x = 1), pageSizeOptions = 5)
-  expect_equal(getAttrib(tbl, "pageSizeOptions"), NULL)
+  tbl <- reactable(data, showPageSizeOptions = TRUE)
+  expect_equal(getAttrib(tbl, "showPageSizeOptions"), TRUE)
 
-  # pageSizeOptions should be serialized as an array
-  tbl <- reactable(data, showPageSizeOptions = TRUE, pageSizeOptions = c(1, 3))
-  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(1, 3))
-  tbl <- reactable(data, showPageSizeOptions = TRUE, pageSizeOptions = 5)
-  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(5))
+  tbl <- reactable(data, showPageSizeOptions = FALSE)
+  expect_equal(getAttrib(tbl, "showPageSizeOptions"), FALSE)
 
   expect_error(reactable(data, showPageSizeOptions = "true"), "`showPageSizeOptions` must be TRUE or FALSE")
+})
+
+test_that("pageSizeOptions", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), NULL)
+
+  tbl <- reactable(data, pageSizeOptions = c(10, 25, 50, 100))
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(10, 25, 50, 100))
+
+  # Length-1 pageSizeOptions should be serialized as a JSON array
+  tbl <- reactable(data,  pageSizeOptions = 5)
+  expect_equal(getAttrib(tbl, "pageSizeOptions"), list(5))
+
   expect_error(reactable(data, pageSizeOptions = "1"), "`pageSizeOptions` must be numeric")
 })
 
@@ -581,20 +635,24 @@ test_that("paginationType", {
   data <- data.frame(x = 1)
 
   tbl <- reactable(data)
-  expect_equal(getAttrib(tbl, "paginationType"), "numbers")
+  expect_equal(getAttrib(tbl, "paginationType"), NULL)
 
   for (type in c("numbers", "jump", "simple")) {
     tbl <- reactable(data, paginationType = type)
     expect_equal(getAttrib(tbl, "paginationType"), type)
   }
 
-  expect_error(reactable(data, paginationType = "none"), '`paginationType` must be one of "numbers", "jump", "simple"')
+  expect_error(reactable(data, paginationType = "none"),
+               '`paginationType` must be one of "numbers", "jump", "simple"')
 })
 
 test_that("defaultPageSize", {
   data <- data.frame(x = 1)
 
   tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "defaultPageSize"), NULL)
+
+  tbl <- reactable(data, defaultPageSize = 10)
   expect_equal(getAttrib(tbl, "defaultPageSize"), 10)
 
   tbl <- reactable(data, defaultPageSize = 1)
@@ -616,6 +674,36 @@ test_that("showPagination", {
   expect_equal(getAttrib(tbl, "showPagination"), FALSE)
 
   expect_error(reactable(data, showPagination = "false"), "`showPagination` must be TRUE or FALSE")
+})
+
+test_that("showPageInfo", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "showPageInfo"), NULL)
+
+  tbl <- reactable(data, showPageInfo = TRUE)
+  expect_equal(getAttrib(tbl, "showPageInfo"), TRUE)
+
+  tbl <- reactable(data, showPageInfo = FALSE)
+  expect_equal(getAttrib(tbl, "showPageInfo"), FALSE)
+
+  expect_error(reactable(data, showPageInfo = "true"), "`showPageInfo` must be TRUE or FALSE")
+})
+
+test_that("minRows", {
+  data <- data.frame(x = 1)
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "minRows"), NULL)
+
+  tbl <- reactable(data, minRows = 1)
+  expect_equal(getAttrib(tbl, "minRows"), 1)
+
+  tbl <- reactable(data, minRows = 10)
+  expect_equal(getAttrib(tbl, "minRows"), 10)
+
+  expect_error(reactable(data, minRows = "2"), "`minRows` must be numeric")
 })
 
 test_that("paginateSubRows", {
@@ -644,7 +732,7 @@ test_that("sub rows", {
   tbl <- reactable(data)
   columns <- getAttrib(tbl, "columns")
   expect_equal(length(columns), 1)
-  expect_equal(columns[[1]]$accessor, "x")
+  expect_equal(columns[[1]]$id, "x")
 })
 
 test_that("column renderers", {
@@ -764,7 +852,7 @@ test_that("row details", {
   expect_equal(
     attribs$columns[[1]],
     list(
-      accessor = ".details", name = "", type = "NULL", sortable = FALSE,
+      id = ".details", name = "", type = NULL, sortable = FALSE,
       resizable = FALSE, filterable = FALSE, searchable = FALSE, width = 45,
       align = "center", details = list("a", NULL)
     )
@@ -902,12 +990,11 @@ test_that("html dependencies from rendered content are passed through", {
 
 test_that("row selection", {
   data <- data.frame(x = c(1, 2, 3))
-  tbl <- reactable(data, selection = "single", selectionId = "selected")
+  tbl <- reactable(data, selection = "single")
   attribs <- getAttribs(tbl)
   expect_equal(attribs$selection, "single")
-  expect_equal(attribs$selectionId, "selected")
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".selection", name = "", type = "NULL", resizable = FALSE,
+    id = ".selection", name = "", type = NULL, resizable = FALSE,
     width = 45, selectable = TRUE
   ))
 
@@ -927,7 +1014,7 @@ test_that("row selection", {
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[1]], list(
-    accessor = ".selection", name = "", type = "NULL", resizable = TRUE,
+    id = ".selection", name = "", type = NULL, resizable = TRUE,
     width = 100, selectable = TRUE, className = "my-cls"
   ))
 
@@ -938,9 +1025,18 @@ test_that("row selection", {
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columnGroups[[1]]$columns, list(".selection", "x"))
 
+  expect_error(reactable(data, selection = "none"), '`selection` must be "multiple" or "single"')
+
   # Out of bounds errors
   expect_error(reactable(data, selection = "single", defaultSelected = c(0, 1)))
   expect_error(reactable(data, selection = "multiple", defaultSelected = c(2, 4)))
+})
+
+test_that("selectionId", {
+  expect_warning(
+    reactable(data.frame(x = 1), selectionId = "selected"),
+    "`selectionId` is deprecated."
+  )
 })
 
 test_that("onClick", {
@@ -976,14 +1072,15 @@ test_that("column class functions", {
   expect_equal(attribs$columns[[2]]$className, list("2-1-y", "4-2-y", "6-3-y"))
   expect_equal(attribs$columns[[3]]$className, list("3-1", "3-2", "3-3"))
 
-  # POSIXlt objects should be handled
+  # POSIXlt objects should be handled correctly (mostly just on R <= 3.4)
   data$p <- c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))
   tbl <- reactable(data, columns = list(
     p = colDef(class = function(value) value)
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[4]]$className,
-               list(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05")))
+               # Use as.list(c(...)) instead of list() to preserve tzone attributes
+               as.list(c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))))
 
   # JS functions
   tbl <- reactable(data, columns = list(
@@ -1014,14 +1111,15 @@ test_that("column style functions", {
   expect_equal(attribs$columns[[3]]$style,
                list(list(content = "3-1"), list(content = "3-2"), list(content = "3-3")))
 
-  # POSIXlt objects should be handled
+  # POSIXlt objects should be handled correctly (mostly just on R <= 3.4)
   data$p <- c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))
   tbl <- reactable(data, columns = list(
     p = colDef(style = function(value) value)
   ))
   attribs <- getAttribs(tbl)
   expect_equal(attribs$columns[[4]]$style,
-               list(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05")))
+               # Use as.list(c(...)) instead of list() to preserve tzone attributes
+               as.list(c(as.POSIXlt("2019-01-01"), as.POSIXlt("2019-05-01"), as.POSIXlt("2019-07-05"))))
 
   # JS functions
   tbl <- reactable(data, columns = list(
@@ -1069,6 +1167,24 @@ test_that("rowClass and rowStyle", {
   attribs <- getAttribs(tbl)
   expect_equal(attribs$rowStyle,
                list(list("background-color" = "red"), list(color = "red"), NULL))
+})
+
+test_that("width, height, and sizingPolicy", {
+  data <- data.frame(x = 1)
+  expect_error(reactable(data, width = "not a valid CSS unit"))
+  expect_error(reactable(data, height = "not a valid CSS unit"))
+
+  tbl <- reactable(data)
+  expect_equal(tbl$width, NULL)
+  expect_equal(tbl$height, NULL)
+
+  tbl <- reactable(data, width = "400px", height = "100%")
+  expect_equal(tbl$width, "400px")
+  expect_equal(tbl$height, "100%")
+
+  expect_equal(tbl$sizingPolicy$knitr$figure, FALSE)
+  expect_equal(tbl$sizingPolicy$defaultWidth, "auto")
+  expect_equal(tbl$sizingPolicy$defaultHeight, "auto")
 })
 
 test_that("theme", {
@@ -1143,6 +1259,36 @@ test_that("language", {
                "`language` must be a reactable language options object")
 })
 
+test_that("meta", {
+  data <- data.frame(x = 1)
+
+  expect_error(reactable(data, meta = "meta"), "`meta` must be a named list")
+
+  tbl <- reactable(data)
+  expect_equal(getAttrib(tbl, "meta"), NULL)
+
+  # Empty lists should be omitted, not serialized as an empty array through jsonlite
+  tbl <- reactable(data, meta = list())
+  expect_equal(getAttrib(tbl, "meta"), NULL)
+
+  meta <- list(
+    number = 30,
+    str = "str",
+    df = data.frame(y = 2),
+    func = JS("value => value > 30"),
+    na = NA,
+    naInteger = NA_integer_,
+    null = NULL,
+    date = as.POSIXct("2019-01-02 3:22:15"),
+    array = c(2, 4, 6),
+    arrayLength1 = 1,
+    list = list(1),
+    emptyList = list()  # will be serialized as []
+  )
+  tbl <- reactable(data, meta = meta)
+  expect_equal(getAttrib(tbl, "meta"), meta)
+})
+
 test_that("elementId", {
   data <- data.frame(x = 1)
 
@@ -1169,18 +1315,199 @@ test_that("reactableOutput", {
   expect_true(length(deps) > 0)
 
   # Output container should have data-reactable-output ID set
-  expect_equal(output[[1]][[4]]$attribs[["data-reactable-output"]], "mytbl")
-  expect_equal(output[[1]][[4]]$name, "div")
-  expect_equal(output[[1]][[4]]$attribs$id, "mytbl")
+  expect_equal(output[[1]]$attribs[["data-reactable-output"]], "mytbl")
+  expect_equal(output[[1]]$name, "div")
+  expect_equal(output[[1]]$attribs$id, "mytbl")
 })
 
 test_that("reactable_html", {
   html <- reactable_html("id", "color: red", "class")
-  expect_equal(html[[4]], htmltools::tags$div(id = "id", class = "class", style = "color: red"))
+  expect_equal(html, htmltools::tags$div(id = "id", class = "class", style = "color: red", reactDependencies()))
 
   # Text color should be set in R Notebooks
   old <- options(rstudio.notebook.executing = TRUE)
   on.exit(options(old))
   html <- reactable_html(NULL, "color: red", NULL)
-  expect_equal(html[[4]], htmltools::tags$div(style = "color: #333;color: red"))
+  expect_equal(html, htmltools::tags$div(style = "color: #333;color: red", reactDependencies()))
+})
+
+test_that("reactable.yaml widget dependencies are included with correct version", {
+  deps <- htmlwidgets::getDependency("reactable")
+  reactableDep <- Find(function(x) x$name == "reactable", deps)
+  expect_true(!is.null(reactableDep))
+  # Keep widget dependency version in sync with package version
+  expect_equal(package_version(reactableDep$version), packageVersion("reactable"))
+  # Ensure reactable.css is included and named correctly, as it's also used as
+  # the insertion point for theme style injection
+  expect_equal(reactableDep$stylesheet, "reactable.css")
+})
+
+# Static rendering (experimental)
+test_that("static rendering", {
+  data <- data.frame(
+    x = c(1, 2),
+    y = c("a", "column-y-cell"),
+    z = I(list(list(1,2,3), list(4,5,6))),
+    stringsAsFactors = FALSE
+  )
+
+  expect_error(reactable(data, static = "true"), "`static` must be TRUE or FALSE")
+
+  # expect_snapshot() uses capture.output(), which forces UTF-8 characters to latin-1 on
+  # Windows R <= 4.1 or other non-UTF-8 platforms. expect_snapshot_value() is harder to read
+  # but handles UTF-8 characters.
+  # For any errors like `Error: lexical error: invalid char in json text.`, delete the snapshot
+  # entirely and regenerate.
+  expect_snapshot_html_with_utf8 <- function(x) expect_snapshot_value(as.character(x))
+
+  tbl <- reactable(
+    data,
+    static = TRUE,
+    elementId = "stable-id-static-rendering"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  expect_true(grepl("data-react-ssr", rendered$html))
+  expect_true(grepl(">column-y-cell<", rendered$html))
+  expect_snapshot(cat(rendered$html))
+
+  # JS evals should always be serialized as an array
+  expect_true(grepl('"evals":[]', rendered$html, fixed = TRUE))
+
+  # Themes critical CSS should be included in <head>
+  tbl <- reactable(
+    data,
+    static = TRUE,
+    theme = reactableTheme(color = "blue", borderWidth = 3),
+    elementId = "stable-id-theme-critical-css"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  styleDep <- Find(
+    function(dep) !is.null(dep$head) && grepl('<style data-emotion="reactable .+color:blue;', dep$head),
+    rendered$dependencies
+  )
+  expect_true(!is.null(styleDep))
+  expect_snapshot(cat(styleDep$head))
+  expect_snapshot(cat(rendered$html))
+
+  # Custom render functions and JS evals should work
+  tbl <- reactable(
+    data,
+    columns = list(
+      x = colDef(cell = JS("cellInfo => `js-rendered_${cellInfo.value}_`")),
+      y = colDef(cell = function(value) htmltools::tags$b(value))
+    ),
+    static = TRUE,
+    elementId = "stable-id-custom-js-evals"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  expect_true(grepl("js-rendered_2_", rendered$html))
+  expect_true(grepl("<b>column-y-cell</b>", rendered$html))
+  expect_snapshot(cat(rendered$html))
+
+  # Custom render functions and JS evals that call React externally should work
+  tbl <- reactable(
+    data,
+    columns = list(
+      y = colDef(cell = JS("cellInfo => React.createElement('b', null, cellInfo.value)"))
+    ),
+    static = TRUE,
+    elementId = "stable-id-external-React"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  expect_true(grepl("<b>column-y-cell</b>", rendered$html))
+  expect_snapshot(cat(rendered$html))
+
+  # Known limitation: default expanded rows with defaultExpanded = TRUE is not currently supported.
+  # Note: add a test for nested tables if it ever does become supported.
+  tbl <- reactable(
+    data.frame(x = 1),
+    details = function(i) "row-details",
+    static = TRUE,
+    elementId = "stable-id-row-details"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  expect_false(grepl(">row-details<", rendered$html))
+  expect_snapshot_html_with_utf8(rendered$html)
+
+  # Embedded HTML widgets' root elements and widget scripts should not be statically rendered
+  tbl <- reactable(
+    data.frame(x = 1),
+    columns = list(x = colDef(cell = function() {
+      sparkline::sparkline(c(1, 2), elementId = "stable-id-sparkline")
+    })),
+    static = TRUE,
+    elementId = "stable-id-html-widgets"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  expect_false(grepl("sparkline", strsplit(rendered$html, "<script")[[1]][[1]]))
+  expect_equal(lengths(gregexpr("<script ", rendered$html)), 1) # Should only be one <script> for reactable
+  expect_snapshot(cat(rendered$html))
+
+  # Column formatting features that depend on Intl polyfills should work
+  formatData <- data.frame(
+    str = "str",
+    pct = 0.75,
+    # Test for floating-point precision issues: should not be formatted as 52.90000000000001%
+    pct_digits = 0.529,
+    currency_USD = 10,
+    currency_EUR = 11.123,
+    date = as.POSIXct("2019-05-06 3:22:15", tz = "UTC"),
+    time = as.POSIXct("2019-05-06 3:22:15", tz = "UTC"),
+    num = 1234.1234,
+    locale_hi_IN = 1234567.4,
+    stringsAsFactors = FALSE
+  )
+  tbl <- reactable(
+    formatData,
+    columns = list(
+      str = colDef(format = colFormat(prefix = "pre_", suffix = "_suffix")),
+      pct = colDef(format = colFormat(percent = TRUE)),
+      pct_digits = colDef(format = colFormat(percent = TRUE)),
+      currency_USD = colDef(format = colFormat(currency = "USD")),
+      currency_EUR = colDef(format = colFormat(currency = "EUR")),
+      date = colDef(format = colFormat(datetime = TRUE, prefix = "_date_", suffix = "_date_")),
+      time = colDef(format = colFormat(time = TRUE, prefix = "_time_", suffix = "_time_")),
+      num = colDef(format = colFormat(digits = 1, separators = TRUE)),
+      # Current limitation: locales other than "en" aren't supported for now
+      locale_hi_IN = colDef(format = colFormat(locales = "hi-IN", currency = "INR", separators = TRUE))
+    ),
+    static = TRUE,
+    elementId = "stable-id-formatting-intl-polyfills"
+  )
+  rendered <- htmltools::renderTags(tbl)
+  html <- rendered$html
+  expect_true(grepl("pre_str_suffix", html, fixed = TRUE))
+  expect_true(grepl(">75%<", html, fixed = TRUE))
+  expect_true(grepl(">52.9%<", html, fixed = TRUE))
+  expect_true(grepl(">$10.00<", html, fixed = TRUE))
+  expect_true(grepl(">€11.12<", html, fixed = TRUE))
+  expect_true(grepl(">1,234.1<", html, fixed = TRUE))
+  expect_true(grepl(">₹1,234,567.40<", html, fixed = TRUE))
+  # Date/time formatting depends on the local timezone, which can't easily be controlled in tests
+  expect_false(grepl("_date_2019-05-06T03:22:15Z_date_", html))
+  html <- sub(">_date_.+_date_<", ">_date_replaced_date_<", html)
+  expect_false(grepl("_time_2019-05-06T03:22:15Z_time_", html))
+  html <- sub(">_time_.+_time_<", ">_time_replaced_time_<", html)
+  expect_snapshot_html_with_utf8(html)
+
+  # Should fall back to client-side rendering when there are rendering errors
+  tbl <- reactable(
+    data,
+    columns = list(x = colDef(cell = JS("throw new Error('error rendering JS')"))),
+    static = TRUE,
+    elementId = "stable-id-CSR-fallback"
+  )
+  expect_warning({ rendered <- htmltools::renderTags(tbl) }, "Failed to render table to static HTML:\nError: error rendering JS")
+  expect_false(grepl("data-react-ssr", rendered$html))
+  expect_false(grepl(">column-y-cell<", rendered$html))
+  expect_snapshot(cat(rendered$html))
+
+  # Custom knit_print method should work
+  tbl <- reactable(data, static = TRUE)
+  output <- knitr::knit_print(tbl, options = list(screenshot.force = FALSE))
+  expect_true(grepl("data-react-ssr", output))
+
+  tbl <- reactable(data)
+  output <- knitr::knit_print(tbl, options = list(screenshot.force = FALSE))
+  expect_false(grepl("data-react-ssr", output))
 })

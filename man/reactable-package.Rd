@@ -4,9 +4,9 @@
 \name{reactable-package}
 \alias{reactable-package}
 \alias{_PACKAGE}
-\title{reactable: Interactive Data Tables Based on 'React Table'}
+\title{reactable: Interactive Data Tables for R}
 \description{
-Interactive data tables for R, based on the 'React Table' JavaScript library. Provides an HTML widget that can be used in 'R Markdown' documents and 'Shiny' applications, or viewed from an R console.
+Interactive data tables for R, based on the 'React Table' JavaScript library. Provides an HTML widget that can be used in 'R Markdown' or 'Quarto' documents, 'Shiny' applications, or viewed from an R console.
 }
 \details{
 See the \href{https://glin.github.io/reactable/}{online documentation} for
@@ -28,6 +28,18 @@ Other contributors:
 \itemize{
   \item Tanner Linsley (React Table library) [contributor, copyright holder]
   \item  Emotion team and other contributors (Emotion library) [contributor, copyright holder]
+  \item Kent Russell (reactR package) [contributor, copyright holder]
+  \item Ramnath Vaidyanathan (htmlwidgets package) [contributor, copyright holder]
+  \item Joe Cheng (htmlwidgets package) [contributor, copyright holder]
+  \item JJ Allaire (htmlwidgets package) [contributor, copyright holder]
+  \item Yihui Xie (htmlwidgets package) [contributor, copyright holder]
+  \item Kenton Russell (htmlwidgets package) [contributor, copyright holder]
+  \item  Facebook, Inc. and its affiliates (React library) [contributor, copyright holder]
+  \item  FormatJS (FormatJS libraries) [contributor, copyright holder]
+  \item  Feross Aboukhadijeh, and other contributors (buffer library) [contributor, copyright holder]
+  \item Roman Shtylman (process library) [contributor, copyright holder]
+  \item James Halliday (stream-browserify library) [contributor, copyright holder]
+  \item  Posit Software, PBC [funder, copyright holder]
 }
 
 }

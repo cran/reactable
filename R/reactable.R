@@ -3,6 +3,7 @@
 #' examples and an extensive usage guide.
 #' @keywords internal
 #' @import htmlwidgets
+#' @import htmltools
 #' @name reactable-package
 #' @aliases reactable-package
 "_PACKAGE"
@@ -66,10 +67,6 @@
 #'   To get the selected rows in Shiny, use [getReactableState()].
 #'
 #'   To customize the selection column, use `".selection"` as the column name.
-#' @param selectionId Shiny input ID for the selected rows. The selected rows are
-#'   given as a numeric vector of row indices, or `NULL` if no rows are selected.
-#'   **NOTE:** `selectionId` will be deprecated in a future release.
-#'   Use [getReactableState()] to get the selected rows in Shiny instead.
 #' @param defaultSelected A numeric vector of default selected row indices.
 #' @param onClick Action to take when clicking a cell. Either `"expand"` to expand
 #'   the row, `"select"` to select the row, or a [JS()] function that takes a
@@ -109,7 +106,23 @@
 #'   Can also be a function that returns a [reactableTheme()] or `NULL`.
 #' @param language Language options for the table, specified by
 #'   [reactableLang()]. Defaults to the global `reactable.language` option.
+#' @param meta Custom metadata to pass to JavaScript render functions or style functions.
+#'   A named list of values that can also be [JS()] expressions or functions.
+#'   Custom metadata can be accessed using the `state.meta` property, and updated
+#'   using `updateReactable()` in Shiny or `Reactable.setMeta()` in the JavaScript API.
 #' @param elementId Element ID for the widget.
+#' @param static Render the table to static HTML? Defaults to the global
+#'  `reactable.static` option. Requires the V8 package, which is not installed
+#'   with reactable by default.
+#'
+#'   With static rendering, tables are pre-rendered to their initial HTML so they appear
+#'   immediately without any flash of content. Tables are then made interactive and
+#'   subsequently rendered by JavaScript as needed.
+#'
+#'   Static rendering is **experimental**, and is not supported for tables
+#'   rendered via [reactableOutput()] in Shiny.
+#' @param selectionId **Deprecated**. Use [getReactableState()] to get the selected rows
+#'   in Shiny.
 #' @return A `reactable` HTML widget that can be used in R Markdown documents
 #'   and Shiny applications, or viewed from an R console.
 #'
@@ -189,7 +202,6 @@ reactable <- function(
   details = NULL,
   defaultExpanded = FALSE,
   selection = NULL,
-  selectionId = NULL,
   defaultSelected = NULL,
   onClick = NULL,
   highlight = FALSE,
@@ -206,11 +218,14 @@ reactable <- function(
   rowClass = NULL,
   rowStyle = NULL,
   fullWidth = TRUE,
-  width = "auto",
-  height = "auto",
+  width = NULL,
+  height = NULL,
   theme = getOption("reactable.theme"),
   language = getOption("reactable.language"),
-  elementId = NULL
+  meta = NULL,
+  elementId = NULL,
+  static = getOption("reactable.static", FALSE),
+  selectionId = NULL
 ) {
   crosstalkKey <- NULL
   crosstalkGroup <- NULL
@@ -243,11 +258,11 @@ reactable <- function(
     stop("`rownames` must be TRUE or FALSE")
   } else if (rownames) {
     rownamesKey <- ".rownames"
-    # Get row names from attribute to preserve type (in case of integer row names)
-    data <- cbind(
-      stats::setNames(list(attr(data, "row.names")), rownamesKey),
-      data,
-      stringsAsFactors = FALSE
+    # Get row names from attribute to preserve type (in case of integer row names).
+    # cbind.data.frame() is for consistent behavior with dplyr's grouped_df in R <= 3.6
+    data <- cbind.data.frame(
+      stats::setNames(data.frame(attr(data, "row.names"), stringsAsFactors = FALSE), rownamesKey),
+      data
     )
     rownamesColumn <- colDef(name = "", sortable = FALSE, filterable = FALSE)
     if (rownamesKey %in% names(columns)) {
@@ -420,8 +435,11 @@ reactable <- function(
   if (!is.null(selection) && !selection %in% c("multiple", "single")) {
     stop('`selection` must be "multiple" or "single"')
   }
-  if (!is.null(selectionId) && !is.character(selectionId)) {
-    stop("`selectionId` must be a character")
+  if (!is.null(selectionId)) {
+    warning("`selectionId` is deprecated. Use `getReactableState()` to get the selected rows in Shiny.")
+    if (!is.character(selectionId)) {
+      stop("`selectionId` must be a character")
+    }
   }
   if (!is.null(defaultSelected)) {
     if (!is.numeric(defaultSelected)) {
@@ -505,8 +523,17 @@ reactable <- function(
       stop("`theme` must be a reactable theme object")
     }
   }
+
   if (!is.null(language) && !is.reactableLang(language)) {
     stop("`language` must be a reactable language options object")
+  }
+
+  if (!is.null(meta) && !isNamedList(meta)) {
+    stop("`meta` must be a named list")
+  }
+
+  if (!is.logical(static)) {
+    stop("`static` must be TRUE or FALSE")
   }
 
   addDependencies <- function(x) {
@@ -519,7 +546,7 @@ reactable <- function(
 
   cols <- lapply(columnKeys, function(key) {
     column <- list(
-      accessor = key,
+      id = key,
       name = key,
       type = colType(data[[key]])
     )
@@ -619,26 +646,22 @@ reactable <- function(
     })
   }
 
-  data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE, digits = NA,
-                           POSIXt = "ISO8601", Date = "ISO8601", UTC = TRUE, force = TRUE,
-                           auto_unbox = TRUE)
+  data <- toJSON(data)
 
   # Create a unique key for the data. The key is used to fully reset state when
   # the data changes (for tables in Shiny).
   dataKey <- digest::digest(list(data, cols))
 
-  if (isV2()) {
-    widgetName <- "reactable"
-  } else {
-    widgetName <- "reactable_v1"
-    class <- paste("reactable", class)
-  }
+  # Serialize user-set args only to keep the widget HTML slim
+  defaultArgs <- formals()
+  args <- as.list(match.call())
+  setArgs <- stats::setNames(names(defaultArgs) %in% names(args), names(defaultArgs))
 
   component <- reactR::component("Reactable", list(
     data = data,
     columns = cols,
     columnGroups = columnGroups,
-    pivotBy = as.list(groupBy),
+    groupBy = as.list(groupBy),
     sortable = if (!sortable) FALSE,
     resizable = if (resizable) TRUE,
     filterable = if (filterable) TRUE,
@@ -647,13 +670,13 @@ reactable <- function(
     defaultSortDesc = if (isDescOrder(defaultSortOrder)) TRUE,
     defaultSorted = columnSortDefs(defaultSorted),
     pagination = if (!pagination) FALSE,
-    defaultPageSize = defaultPageSize,
-    showPageSizeOptions = if (showPageSizeOptions) TRUE,
-    pageSizeOptions = if (showPageSizeOptions) pageSizeOptions,
-    paginationType = paginationType,
+    defaultPageSize = if (setArgs["defaultPageSize"]) defaultPageSize,
+    showPageSizeOptions = if (setArgs["showPageSizeOptions"]) showPageSizeOptions,
+    pageSizeOptions = if (setArgs["pageSizeOptions"]) pageSizeOptions,
+    paginationType = if (setArgs["paginationType"]) paginationType,
     showPagination = if (!is.null(showPagination)) showPagination,
-    showPageInfo = showPageInfo,
-    minRows = minRows,
+    showPageInfo = if (setArgs["showPageInfo"]) showPageInfo,
+    minRows = if (setArgs["minRows"]) minRows,
     paginateSubRows = if (paginateSubRows) TRUE,
     defaultExpanded = if (defaultExpanded) defaultExpanded,
     selection = selection,
@@ -674,24 +697,29 @@ reactable <- function(
     rowClassName = rowClass,
     rowStyle = rowStyle,
     inline = if (!fullWidth) TRUE,
-    width = if (width != "auto") width,
-    height = if (height != "auto") height,
+    width = width,
+    height = height,
     theme = theme,
     language = language,
+    meta = meta,
     crosstalkKey = crosstalkKey,
     crosstalkGroup = crosstalkGroup,
     elementId = elementId,
     dataKey = dataKey,
-    key = if (!isV2()) dataKey
+    static = static
   ))
 
   htmlwidgets::createWidget(
-    name = widgetName,
+    name = "reactable",
     reactR::reactMarkup(component),
     width = width,
     height = height,
-    # Don't limit width when rendered inside an R Notebook
-    sizingPolicy = htmlwidgets::sizingPolicy(knitr.figure = FALSE),
+    sizingPolicy = htmlwidgets::sizingPolicy(
+      defaultWidth = "auto",
+      defaultHeight = "auto",
+      # Don't limit width when rendered inside an R Notebook
+      knitr.figure = FALSE
+    ),
     package = "reactable",
     dependencies = dependencies,
     elementId = elementId
@@ -757,8 +785,7 @@ columnSortDefs <- function(defaultSorted) {
 #'
 #' @export
 reactableOutput <- function(outputId, width = "auto", height = "auto", inline = FALSE) {
-  widgetName <- if (isV2()) "reactable" else "reactable_v1"
-  output <- htmlwidgets::shinyWidgetOutput(outputId, widgetName, width, height,
+  output <- htmlwidgets::shinyWidgetOutput(outputId, "reactable", width, height,
                                            inline = inline, package = "reactable")
   # Add attribute to Shiny output containers to differentiate them from static widgets
   addOutputId <- function(x) {
@@ -780,6 +807,104 @@ renderReactable <- function(expr, env = parent.frame(), quoted = FALSE) {
   htmlwidgets::shinyRenderWidget(expr, reactableOutput, env, quoted = TRUE)
 }
 
+#' Convert a reactable widget to HTML tags
+#'
+#' This S3 method exists to enable [reactable()]'s `static` rendering option.
+#'
+#' @param x a [reactable()] instance.
+#' @param standalone Logical value indicating whether the widget is being
+#'   rendered in a standalone context.
+#'
+#' @keywords internal
+#' @export
+as.tags.reactable <- function(x, standalone = FALSE) {
+  # Only need the static attribute for decided whether to SSR
+  attribs <- x$x$tag$attribs
+  static <- attribs$static
+  x$x$tag$attribs$static <- NULL
+
+  # Should call htmlwidgets:::as.tags.htmlwidget(), which calls htmlwidgets:::toHTML()
+  result <- NextMethod("as.tags", x, standalone = standalone)
+
+  if (!isTRUE(static)) {
+    return(result)
+  }
+
+  if (!requireNamespace("V8", quietly = TRUE)) {
+    # Fall back to client-side rendering if V8 isn't installed
+    warning('The V8 package must be installed to use `reactable(static = TRUE)`.
+Do you need to run `install.packages("V8")`?', call. = FALSE)
+    return(result)
+  }
+
+  input_json <- toJSON(list(
+    props = attribs,
+    evals = htmlwidgets::JSEvals(attribs)
+  ))
+
+  output <- list()
+
+  tryCatch({
+    ctx <- V8::v8()
+    ctx$source(system.file("htmlwidgets/reactable.server.js", package = "reactable", mustWork = TRUE))
+    output <- ctx$call("Reactable.renderToHTML", input_json)
+  }, error = function(e) {
+    warning("Failed to render table to static HTML:\n", conditionMessage(e), call. = FALSE)
+  })
+
+  if (length(output) == 0) {
+    return(result)
+  }
+
+  ssrHTML <- HTML(output$html)
+  ssrCSS <- NULL
+
+  if (any(nzchar(output$css))) {
+    ids <- paste(output$ids, collapse = " ")
+    # Make sure to keep this in sync with the Emotion cache key.
+    # Since this isn't well documented at https://emotion.sh/docs/ssr#when-using-emotioncss,
+    # data-emotion="{cache-key} {space-separated-ids}" allows for hydration to
+    # occur automatically without having to call emotion.cache.hydrate(ids),
+    # and prevents duplicate styles from being inserted into the page.
+    emotionAttr <- sprintf("reactable %s", ids)
+    styles <- tags$style(`data-emotion` = emotionAttr, htmltools::HTML(output$css))
+    # Use an empty htmlDependency to insert style tags into <head>. This prevents
+    # duplicate style tags when rendering duplicate tables and works around a
+    # pkgdown issue. pkgdown ignores tags$head() but does use head content from
+    # htmlDependencies, although still inserts the head content at the top of
+    # <body> instead of <head>.
+    ssrCSS <- htmlDependency(
+      emotionAttr, "1", "", head = as.character(styles), package = "reactable"
+    )
+  }
+
+  # Temporarily wrap result in additional tag to avoid this issue
+  # https://github.com/rstudio/htmltools/issues/334
+  wrapper <- htmltools::tag("WRAPPER", list(result))
+  wrapper <- tagAppendChildren(
+    wrapper, ssrHTML, ssrCSS, .cssSelector = ".reactable"
+  )
+  wrapper <- tagAppendAttributes(
+    wrapper, `data-react-ssr` = NA, .cssSelector = ".reactable"
+  )
+  browsable(as.tags(wrapper$children))
+}
+
+#' Print a reactable widget for knitr
+#'
+#' This S3 method exists to enable [reactable()]'s `static` rendering option.
+#'
+#' @param x A [reactable()] instance.
+#' @param ... Additional arguments passed to the S3 method.
+#'
+#' @keywords internal
+#' @export
+knit_print.reactable <- function(x, ...) {
+  # knitr options (out.width/out.height) are ignored here because as.tags() doesn't
+  # pass it to htmlwidgets:::toHTML(), but this is fine because reactable disables
+  # knitr.figure in the sizing policy.
+  knitr::knit_print(htmltools::as.tags(x, standalone = FALSE), ...)
+}
 
 #' Called by HTMLWidgets to produce the widget's root element
 #'
@@ -794,26 +919,21 @@ widget_html.reactable <- function(id, style, class, ...) {
   if (isTRUE(getOption("rstudio.notebook.executing"))) {
     style <- paste0("color: #333;", style)
   }
-  htmltools::tagList(
-    # Necessary for RStudio Viewer version < 1.2 and IE11
-    reactR::html_dependency_corejs(),
+
+  htmltools::tags$div(
+    id = id, class = class, style = style, reactDependencies()
+  )
+}
+
+# Make sure react.js come before reactable.js. Note this "workaround"
+# wouldn't be needed with ramnathv/htmlwidgets#324
+reactDependencies <- function() {
+  list(
+    reactR::html_dependency_corejs(), # Necessary for RStudio Viewer version < 1.2 and IE11
     reactR::html_dependency_react(),
-    reactR::html_dependency_reacttools(),
-    htmltools::tags$div(id = id, class = class, style = style)
+    reactR::html_dependency_reacttools()
   )
 }
 
 # Deprecated convention for htmlwidgets <= 1.5.2 support
 reactable_html <- widget_html.reactable
-
-isV2 <- function() {
-  getOption("reactable.v2", TRUE)
-}
-
-reactable_v1 <- function(..., class = NULL) {
-  old <- options(reactable.v2 = FALSE)
-  on.exit(options(old))
-  reactable(...)
-}
-
-reactable_v1_html <- widget_html.reactable

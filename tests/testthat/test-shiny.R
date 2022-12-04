@@ -87,6 +87,33 @@ test_that("updateReactable", {
   updateReactable("mytbl", page = 2, session = session)
   expect_equal(session$lastMsg, list(type = "__reactable__mytbl", message = list(page = 1)))
 
+  # Update meta
+  expect_error(updateReactable("mytbl", meta = TRUE, session = session),
+               "`meta` must be a named list or NA")
+
+  updateReactable("mytbl", meta = list(custom = 123, fn = JS("n => n > 30")), session = session)
+  expect_equal(session$lastMsg, list(
+    type = "__reactable__mytbl",
+    message = list(
+      meta = list(custom = 123, fn = JS("n => n > 30")),
+      jsEvals = I("meta.fn") # Should be wrapped in I() so length-1 arrays serialize as arrays
+    )
+  ))
+  updateReactable("mytbl", meta = NA, session = session)
+  expect_equal(session$lastMsg, list(
+    type = "__reactable__mytbl",
+    message = list(meta = NA)
+  ))
+  updateReactable("mytbl", meta = list(), page = 1, session = session)
+  expect_equal(session$lastMsg, list(
+    type = "__reactable__mytbl",
+    message = list(page = 0)
+  ))
+
+  # JS evals should not include data
+  updateReactable("mytbl", data = data.frame(x = I(list(fn = JS("() => {}")))), session = session)
+  expect_equal(session$lastMsg$message$jsEvals, NULL)
+
   # Should work with Shiny modules
   session <- mockSession(namespace = "mod")
   updateReactable("mytbl", selected = 2, session = session)
@@ -96,7 +123,7 @@ test_that("updateReactable", {
 test_that("getReactableState", {
   session <- mockSession()
   expect_error(getReactableState(123, session = session), "`outputId` must be a character string")
-  expect_error(getReactableState("id", "x", session = session), '`name` must be one of "page", "pageSize", "pages", "selected"')
+  expect_error(getReactableState("id", "x", session = session), '`name` values must be one of "page", "pageSize", "pages", "sorted", "selected"')
 
   expect_null(getReactableState("id"))
   updateReactable("id", session = session)
@@ -112,9 +139,21 @@ test_that("getReactableState", {
   session$input[["mytbl__reactable__pages"]] <- 10
   expect_equal(getReactableState("mytbl", "pages", session = session), 10)
 
+  session$input[["mytbl__reactable__sorted"]] <- list(a = "asc", b = "desc")
+  expect_equal(getReactableState("mytbl", "sorted", session = session), list(a = "asc", b = "desc"))
+
   session$input[["mytbl__reactable__selected"]] <- c(1, 5, 7)
   expect_equal(getReactableState("mytbl", "selected", session = session), c(1, 5, 7))
 
-  expect_equal(getReactableState("mytbl", session = session),
-               list(page = 3, pageSize = 2, pages = 10, selected = c(1, 5, 7)))
+  # Multiple values
+  expect_equal(getReactableState("mytbl", c("page", "pageSize"), session = session), list(page = 3, pageSize = 2))
+
+  # All values
+  expect_equal(getReactableState("mytbl", session = session), list(
+    page = 3,
+    pageSize = 2,
+    pages = 10,
+    sorted = list(a = "asc", b = "desc"),
+    selected = c(1, 5, 7)
+  ))
 })
