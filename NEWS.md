@@ -1,4 +1,10 @@
+# reactable 0.4.1
+
+* Fixed a failing test on Fedora 36 and earlier.
+
 # reactable 0.4.0
+
+[Documentation - reactable 0.4.0](https://v0-4-0--reactable-docs.netlify.app/)
 
 ## New features
 

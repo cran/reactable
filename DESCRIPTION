@@ -1,7 +1,7 @@
 Package: reactable
 Type: Package
 Title: Interactive Data Tables for R
-Version: 0.4.0
+Version: 0.4.1
 Authors@R: c(
     person("Greg", "Lin", email = "glin@glin.io", role = c("aut", "cre")),
     person("Tanner", "Linsley", role = c("ctb", "cph"), comment = "React Table library"),
@@ -37,7 +37,7 @@ Encoding: UTF-8
 RoxygenNote: 7.2.1
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2022-12-04 19:04:07 UTC; greg
+Packaged: 2022-12-07 23:34:41 UTC; greg
 Author: Greg Lin [aut, cre],
   Tanner Linsley [ctb, cph] (React Table library),
   Emotion team and other contributors [ctb, cph] (Emotion library),
@@ -55,4 +55,4 @@ Author: Greg Lin [aut, cre],
   Posit Software, PBC [fnd, cph]
 Maintainer: Greg Lin <glin@glin.io>
 Repository: CRAN
-Date/Publication: 2022-12-04 19:40:02 UTC
+Date/Publication: 2022-12-08 08:10:02 UTC
