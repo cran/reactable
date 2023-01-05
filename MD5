@@ -1,7 +1,7 @@
-6dff77dc8ac831a090cbf5af020b3c3a *DESCRIPTION
+da7d6bba05314a92731cd3602a3b7999 *DESCRIPTION
 18c28e9f5fc1b48811f34969467049f2 *LICENSE
 ef6c2228ea972a3fab90560fd9d7e87f *NAMESPACE
-cf878176dd42ace5a553bdd7bf3c1230 *NEWS.md
+5763dfb7950f55ad7722758ae422476a *NEWS.md
 87ddcbb2bbb29719ea0b65ac4b9b7d93 *R/columns.R
 73b460e20dc1ab9db9b4586f9432c077 *R/language.R
 427ee2106d8f75f9320cd5182f9efec4 *R/onLoad.R
@@ -9,7 +9,7 @@ e3619a912d3ee76c60f433e72d93287a *R/reactable.R
 91c06378be64e50a52319f9fbef344db *R/shiny.R
 d6478fb54d74e10927866a509166216a *R/test-utils.R
 a333e561dcb348e32b9569fd44d96bb7 *R/theme.R
-4b4df0bebdde66ff52f08c4ad1b65086 *R/utils.R
+acff5e86e64ecba53982126dd084844f *R/utils.R
 261d52a001956e8ba1e334bd57ee2a72 *README.md
 5d5dd2dcc6424fb1f785fb377922d15f *inst/examples/app/app.R
 261a22ca8025deb3fdb5b73db69f4e25 *inst/examples/app/assets/styles.css
@@ -20,7 +20,7 @@ d0de30465f2ba787f5c170871ff8f6fa *inst/examples/shiny-data-streaming.R
 9af92f7a28a341c4ea5b8a1d7e4f2b5f *inst/htmlwidgets/reactable.server.js
 a5af523bd6e7735696d4af7e528ba430 *inst/htmlwidgets/reactable.server.js.LICENSE.txt
 1053750a0d3ab47bb2e231aa83643adf *inst/htmlwidgets/reactable.server.js.map
-b12497318df1c0706acf0d7ed5b53c15 *inst/htmlwidgets/reactable.yaml
+0bd87625037191d4400e27cbddc6d2d2 *inst/htmlwidgets/reactable.yaml
 920a351a36d696c11b6c8e356cfad45c *man/as.tags.reactable.Rd
 0293c8b6183c45ee2f47bd30c616d7a5 *man/colDef.Rd
 b9b2aa3cbde0afbdef420032da5e64b9 *man/colFormat.Rd
@@ -37,10 +37,10 @@ a94759d6e519ff32f08df480d915254e *man/reactableLang.Rd
 0bbedf765a551ff58c11325ee00230b4 *man/updateReactable.Rd
 025dda718301043dd0c9617d737cea8b *man/widget_html.reactable.Rd
 9df96ea3011b7dd5a4d24fbe29b10634 *tests/testthat.R
-661d0000befcfc137d9fe016330818fb *tests/testthat/_snaps/reactable.md
+37eb188b9f79dc5d0cf2bb380e4e6a3c *tests/testthat/_snaps/reactable.md
 941972a799beda9c64e36b4af768d076 *tests/testthat/test-columns.R
 3ea6a8680a48a6d4eb7a2a1a62e9b2d6 *tests/testthat/test-language.R
 b0f956c8a26840705bac38f8669d2251 *tests/testthat/test-reactable.R
 56b125376a053b4f0d01c74fc7d168e7 *tests/testthat/test-shiny.R
 ee80d4c228f8d33b6013e7fc4367a4fb *tests/testthat/test-theme.R
-bde636388b39e8eb6c4814b3035a865b *tests/testthat/test-utils.R
+16cf6c68455260037dab54a4786878df *tests/testthat/test-utils.R
