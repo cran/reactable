@@ -1,11 +1,11 @@
-59a598fcba74126ffda4244783b42702 *DESCRIPTION
+ea5d681136ba4989c2358f00aa1e8bdb *DESCRIPTION
 18c28e9f5fc1b48811f34969467049f2 *LICENSE
 ef6c2228ea972a3fab90560fd9d7e87f *NAMESPACE
-72335fba4465130396cbbb3c1fc58756 *NEWS.md
+9695d148fed8b01422552ec03122de4d *NEWS.md
 87ddcbb2bbb29719ea0b65ac4b9b7d93 *R/columns.R
 73b460e20dc1ab9db9b4586f9432c077 *R/language.R
 427ee2106d8f75f9320cd5182f9efec4 *R/onLoad.R
-e3619a912d3ee76c60f433e72d93287a *R/reactable.R
+fa3723973b329a8b642f25d09a4d1f20 *R/reactable.R
 91c06378be64e50a52319f9fbef344db *R/shiny.R
 d6478fb54d74e10927866a509166216a *R/test-utils.R
 a333e561dcb348e32b9569fd44d96bb7 *R/theme.R
@@ -20,8 +20,8 @@ d0de30465f2ba787f5c170871ff8f6fa *inst/examples/shiny-data-streaming.R
 9af92f7a28a341c4ea5b8a1d7e4f2b5f *inst/htmlwidgets/reactable.server.js
 a5af523bd6e7735696d4af7e528ba430 *inst/htmlwidgets/reactable.server.js.LICENSE.txt
 1053750a0d3ab47bb2e231aa83643adf *inst/htmlwidgets/reactable.server.js.map
-2da36391579cd0ea2cc306865ee24cc8 *inst/htmlwidgets/reactable.yaml
-920a351a36d696c11b6c8e356cfad45c *man/as.tags.reactable.Rd
+386020afb4f85bc1538ec15ae9e80709 *inst/htmlwidgets/reactable.yaml
+f8e69621a9c761c72ac2239e528982b6 *man/as.tags.reactable.Rd
 0293c8b6183c45ee2f47bd30c616d7a5 *man/colDef.Rd
 b9b2aa3cbde0afbdef420032da5e64b9 *man/colFormat.Rd
 ba6f56de99ded63e169f2acf1e4a9005 *man/colGroup.Rd
@@ -37,7 +37,7 @@ a94759d6e519ff32f08df480d915254e *man/reactableLang.Rd
 0bbedf765a551ff58c11325ee00230b4 *man/updateReactable.Rd
 025dda718301043dd0c9617d737cea8b *man/widget_html.reactable.Rd
 9df96ea3011b7dd5a4d24fbe29b10634 *tests/testthat.R
-37eb188b9f79dc5d0cf2bb380e4e6a3c *tests/testthat/_snaps/reactable.md
+ee3dbd6708ec8c559e90cb0edbe9b392 *tests/testthat/_snaps/reactable.md
 941972a799beda9c64e36b4af768d076 *tests/testthat/test-columns.R
 3ea6a8680a48a6d4eb7a2a1a62e9b2d6 *tests/testthat/test-language.R
 a21e56bc20d4a2c88f12232477dbad22 *tests/testthat/test-reactable.R
