@@ -1373,6 +1373,16 @@ test_that("static rendering", {
     skip("V8 was built against a version of libv8 without i18n support")
   })
 
+  # Some distros like Debian build V8 with full ICU / i18n support, rather than the typical minimal ICU that includes
+  # the en locale only. In this case, Intl will exist and locales besides en will be supported. We need to know whether
+  # full ICU support is available for testing on platforms like CRAN's Debian machines.
+  v8_has_full_icu_support <- tryCatch({
+    V8::new_context()$eval("Intl")
+    TRUE
+  }, error = function(e) {
+    FALSE
+  })
+
   data <- data.frame(
     x = c(1, 2),
     y = c("a", "column-y-cell"),
@@ -1395,12 +1405,12 @@ test_that("static rendering", {
     elementId = "stable-id-static-rendering"
   )
   rendered <- htmltools::renderTags(tbl)
-  expect_true(grepl("data-react-ssr", rendered$html))
-  expect_true(grepl(">column-y-cell<", rendered$html))
+  expect_match(rendered$html, "data-react-ssr", fixed = TRUE)
+  expect_match(rendered$html, ">column-y-cell<", fixed = TRUE)
   expect_snapshot(cat(rendered$html))
 
   # JS evals should always be serialized as an array
-  expect_true(grepl('"evals":[]', rendered$html, fixed = TRUE))
+  expect_match(rendered$html, '"evals":[]', fixed = TRUE)
 
   # Themes critical CSS should be included in <head>
   tbl <- reactable(
@@ -1429,8 +1439,8 @@ test_that("static rendering", {
     elementId = "stable-id-custom-js-evals"
   )
   rendered <- htmltools::renderTags(tbl)
-  expect_true(grepl("js-rendered_2_", rendered$html))
-  expect_true(grepl("<b>column-y-cell</b>", rendered$html))
+  expect_match(rendered$html, "js-rendered_2_", fixed = TRUE)
+  expect_match(rendered$html, "<b>column-y-cell</b>", fixed = TRUE)
   expect_snapshot(cat(rendered$html))
 
   # Custom render functions and JS evals that call React externally should work
@@ -1443,7 +1453,7 @@ test_that("static rendering", {
     elementId = "stable-id-external-React"
   )
   rendered <- htmltools::renderTags(tbl)
-  expect_true(grepl("<b>column-y-cell</b>", rendered$html))
+  expect_match(rendered$html, "<b>column-y-cell</b>", fixed = TRUE)
   expect_snapshot(cat(rendered$html))
 
   # Known limitation: default expanded rows with defaultExpanded = TRUE is not currently supported.
@@ -1497,7 +1507,7 @@ test_that("static rendering", {
       date = colDef(format = colFormat(datetime = TRUE, prefix = "_date_", suffix = "_date_")),
       time = colDef(format = colFormat(time = TRUE, prefix = "_time_", suffix = "_time_")),
       num = colDef(format = colFormat(digits = 1, separators = TRUE)),
-      # Current limitation: locales other than "en" aren't supported for now
+      # Current limitation: in most V8 builds, locales other than "en" aren't supported for now
       locale_hi_IN = colDef(format = colFormat(locales = "hi-IN", currency = "INR", separators = TRUE))
     ),
     static = TRUE,
@@ -1505,17 +1515,24 @@ test_that("static rendering", {
   )
   rendered <- htmltools::renderTags(tbl)
   html <- rendered$html
-  expect_true(grepl("pre_str_suffix", html, fixed = TRUE))
-  expect_true(grepl(">75%<", html, fixed = TRUE))
-  expect_true(grepl(">52.9%<", html, fixed = TRUE))
-  expect_true(grepl(">$10.00<", html, fixed = TRUE))
-  expect_true(grepl(">€11.12<", html, fixed = TRUE))
-  expect_true(grepl(">1,234.1<", html, fixed = TRUE))
-  expect_true(grepl(">₹1,234,567.40<", html, fixed = TRUE))
+  expect_match(html, "pre_str_suffix", fixed = TRUE)
+  expect_match(html, ">75%<", fixed = TRUE)
+  expect_match(html, ">52.9%<", fixed = TRUE)
+  expect_match(html, ">$10.00<", fixed = TRUE)
+  expect_match(html, ">€11.12<", fixed = TRUE)
+  expect_match(html, ">1,234.1<", fixed = TRUE)
+  if (v8_has_full_icu_support) {
+    expect_match(html, ">₹12,34,567.40<", fixed = TRUE)
+    html <- sub(">₹12,34,567.40<", ">replaced<", html)
+  } else {
+    # en locale fallback
+    expect_match(html, ">₹1,234,567.40<", fixed = TRUE)
+    html <- sub(">₹1,234,567.40<", ">replaced<", html)
+  }
   # Date/time formatting depends on the local timezone, which can't easily be controlled in tests
-  expect_false(grepl("_date_2019-05-06T03:22:15Z_date_", html))
+  expect_no_match(html, "_date_2019-05-06T03:22:15Z_date_", fixed = TRUE)
   html <- sub(">_date_.+_date_<", ">_date_replaced_date_<", html)
-  expect_false(grepl("_time_2019-05-06T03:22:15Z_time_", html))
+  expect_no_match(html, "_time_2019-05-06T03:22:15Z_time_", fixed = TRUE)
   html <- sub(">_time_.+_time_<", ">_time_replaced_time_<", html)
   expect_snapshot_html_with_utf8(html)
 
@@ -1527,16 +1544,16 @@ test_that("static rendering", {
     elementId = "stable-id-CSR-fallback"
   )
   expect_warning({ rendered <- htmltools::renderTags(tbl) }, "Failed to render table to static HTML:\nError: error rendering JS")
-  expect_false(grepl("data-react-ssr", rendered$html))
-  expect_false(grepl(">column-y-cell<", rendered$html))
+  expect_no_match(rendered$html, "data-react-ssr", fixed = TRUE)
+  expect_no_match(rendered$html, ">column-y-cell<", fixed = TRUE)
   expect_snapshot(cat(rendered$html))
 
   # Custom knit_print method should work
   tbl <- reactable(data, static = TRUE)
   output <- knitr::knit_print(tbl, options = list(screenshot.force = FALSE))
-  expect_true(grepl("data-react-ssr", output))
+  expect_match(output, "data-react-ssr", fixed = TRUE)
 
   tbl <- reactable(data)
   output <- knitr::knit_print(tbl, options = list(screenshot.force = FALSE))
-  expect_false(grepl("data-react-ssr", output))
+  expect_no_match(output, "data-react-ssr", fixed = TRUE)
 })
